@@ -16,11 +16,6 @@ macro bind(def, element)
     #! format: on
 end
 
-# ╔═╡ d60444c0-ddce-11ef-2e4e-234174458fd9
-md"""
-# Motion of single charged particle
-"""
-
 # ╔═╡ c8314c51-ff6d-459a-bdd6-0ff217a2ef47
 using PlutoUI
 
@@ -35,6 +30,11 @@ using StaticArrays
 
 # ╔═╡ 87d06c27-9d29-489b-9fba-233c6d5d9203
 using PlutoUI: Slider
+
+# ╔═╡ d60444c0-ddce-11ef-2e4e-234174458fd9
+md"""
+# Motion of single charged particle
+"""
 
 # ╔═╡ 9b918a1b-40f4-4c4b-859c-b69dce887a7e
 TableOfContents()
@@ -194,6 +194,23 @@ Time span:
 # ╔═╡ 178b6fa9-4066-4acb-8cbc-73bae83930a3
 tspan = range(0.0u"s", 90.0u"s", length = 200);
 
+# ╔═╡ 756c7bb1-fb78-4b21-83b2-ccb6b71d1ba3
+function track_motion(fig, ax, filename, points, t = eachindex(points))
+	# TODO calculate limits
+
+	traj = Observable(points[begin:begin+1])
+	lead_point = Observable(points[begin+1])
+
+	record(fig, filename) do io
+		for (t_i, x_i) in zip(t, points)
+			push!(traj[], x_i) # add new point to trajectory
+			lead_point[] = x_i # update leading point
+			traj[] = traj[]
+			recordframe!(io)
+		end
+	end
+end
+
 # ╔═╡ 71069a27-0467-4352-9aff-20db6a27a663
 md"""
 ## Constant and uniform **B** field and **F**
@@ -229,9 +246,14 @@ md"""
 # ╔═╡ bde4ef61-4c56-440f-9082-8decd9b0137a
 md"""
 ```math
-\mathbf{v}(t) = \mathbf{u} + \mathbf{v}_\text{D} + \left(\frac{F_∥}{m} t + v_{∥0}\right) \hat{\mathbf{z}}
-= \begin{pmatrix}
+\begin{align}
+\mathbf{v}(t)
+&= \mathbf{u} + \mathbf{v}_\text{D} + \left(\frac{F_∥}{m} t + v_{∥0}\right) \hat{\mathbf{z}} \\
+&= \begin{pmatrix}
+\\
+\\
 \end{pmatrix}
+\end{align}
 ```
 """
 
@@ -270,9 +292,15 @@ md"""
 # ╔═╡ a56195b7-3170-4c59-99d1-1ea8bae7bf69
 md"""
 ```math
-\mathbf{v}(t) = \mathbf{u} + \mathbf{v}_\text{D} + \left(\frac{F_∥}{m} t + v_{∥0}\right) \hat{\mathbf{z}}
-= \begin{pmatrix}
+\begin{align}
+\mathbf{v}(t)
+&= \mathbf{u} + \mathbf{v}_E + \left(\frac{qE_∥}{m} t + v_{∥0}\right) \hat{\mathbf{z}} \\
+&= \begin{pmatrix}
+\\
+\\
+
 \end{pmatrix}
+\end{align}
 ```
 """
 
@@ -317,7 +345,7 @@ let
     #scatter!(ax, Point3(circ))
 
     x(t) = Point3f(
-        gyromotion(t, (; ω_c, γ₀, v_perp, v_parallel, x₀, v₀)) .|> u"m" .|> ustrip
+        gyromotion(t, (; ω_c, γ₀, v_perp, v_parallel, x₀, v₀)) .|> Base.Fix1(ustrip, u"m")
     )
 
     traj = Observable(x.(tspan[1:2]))
@@ -376,6 +404,7 @@ end
 # ╠═178b6fa9-4066-4acb-8cbc-73bae83930a3
 # ╠═fdc85a17-c829-4f0e-8f4e-9fb5909aaea3
 # ╠═c4914c73-bbf5-4dab-861a-db045f0fc5dd
+# ╠═756c7bb1-fb78-4b21-83b2-ccb6b71d1ba3
 # ╟─71069a27-0467-4352-9aff-20db6a27a663
 # ╟─6c2aebe1-9893-42b2-850e-2a1bed21180d
 # ╟─c8f06a99-2adb-406c-aa32-c3347616e480
