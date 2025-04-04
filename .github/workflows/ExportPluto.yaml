@@ -1,9 +1,7 @@
 name: Export Pluto notebooks
 on:
     push:
-        branches:
-            - main
-            - master
+        branches: [main]
     workflow_dispatch:
 
 # When two jobs run in parallel, cancel the older ones, to make sure that the website is generated from the most recent commit.
@@ -26,14 +24,15 @@ jobs:
             - name: Install Julia
               uses: julia-actions/setup-julia@v2
               with:
-                  version: "1" # This will automatically pick the latest Julia version
+                version: "1" # This will automatically pick the latest Julia version
 
             - name: Cache Julia artifacts & such
               uses: julia-actions/cache@v2
               with:
                 cache-registries: "true"
 
-            # We set up a folder that Pluto can use to cache exported notebooks. If the notebook file did not change, then Pluto can take the exported file from cache instead of running the notebook.
+            # We set up a folder that Pluto can use to cache exported notebooks.
+            # If the notebook file did not change, then Pluto can take the exported file from cache instead of running the notebook.
             - name: Set up notebook state cache
               uses: actions/cache@v4
               with:
@@ -44,8 +43,9 @@ jobs:
 
 
             - name: Run & export Pluto notebooks
+              shell: julia --color=yes {0}
               run: |
-                julia -e 'using Pkg
+                  using Pkg
                   Pkg.activate(mktempdir())
                   Pkg.add([
                     Pkg.PackageSpec(name="PlutoSliderServer", version="0.3.2-0.3"),
@@ -58,8 +58,7 @@ jobs:
                     Export_baked_notebookfile=false,
                     Export_baked_state=false,
                     # more parameters can go here
-                  )'
-
+                  )
 
             - name: Deploy to gh-pages
               uses: JamesIves/github-pages-deploy-action@releases/v4
