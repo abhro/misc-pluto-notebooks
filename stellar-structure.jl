@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.4
+# v0.20.9
 
 using Markdown
 using InteractiveUtils
@@ -19,6 +19,9 @@ using PhysicalConstants.CODATA2018: σ, k_B, c_0 as c, G
 
 # ╔═╡ ae5820a2-26c3-4bf7-9dd5-d136eaf35038
 using CairoMakie
+
+# ╔═╡ 7066ef95-8257-4950-a0a7-c15832e1725e
+TableOfContents()
 
 # ╔═╡ da3e18e3-0cda-440b-932e-7c09988e28dc
 md"""
@@ -132,6 +135,7 @@ G
 
 # ╔═╡ Cell order:
 # ╠═93698b5a-1f3b-4c47-9e67-aff44f234c0f
+# ╠═7066ef95-8257-4950-a0a7-c15832e1725e
 # ╟─da3e18e3-0cda-440b-932e-7c09988e28dc
 # ╟─03118617-5cca-4400-9e87-1562d42d7d44
 # ╠═366f153f-e666-45f1-b594-28d0b8381830
