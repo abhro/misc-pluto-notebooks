@@ -1,11 +1,14 @@
 ### A Pluto.jl notebook ###
-# v0.20.17
+# v0.20.18
 
 using Markdown
 using InteractiveUtils
 
+# ╔═╡ ae5820a2-26c3-4bf7-9dd5-d136eaf35038
+using CairoMakie
+
 # ╔═╡ 93698b5a-1f3b-4c47-9e67-aff44f234c0f
-using PlutoUI
+using PlutoUI: TableOfContents
 
 # ╔═╡ 1e6a2dc7-ff39-4463-a6d3-7a87ecc6ae53
 using BoundaryValueDiffEq
@@ -28,12 +31,6 @@ end
 
 # ╔═╡ 329fa343-39e2-4a0b-adef-9c590a18f19c
 using PhysicalConstants.CODATA2018: σ, k_B, c_0 as c, G
-
-# ╔═╡ ae5820a2-26c3-4bf7-9dd5-d136eaf35038
-using CairoMakie
-
-# ╔═╡ 7066ef95-8257-4950-a0a7-c15832e1725e
-TableOfContents()
 
 # ╔═╡ da3e18e3-0cda-440b-932e-7c09988e28dc
 md"""
@@ -58,7 +55,7 @@ For a non-rotating star in hydrostatic equilibrium (i.e., no time dependent beha
 md"""
 The key variables are the radial coordinate ``r``; ``M_r``, the mass interior to ``r``; ``P``, the local pressure; ``T``, the local temperature; and ``L_r``, the total energy production interior to ``r``. Note that ``P`` and ``T`` are local, while ``M_r`` and ``L_r`` are cumulative. In addition to the key variables just listed, there are numerous auxiliary variables and coefficients used in the equations:
 
-- The local density _ρ_:
+- The local density, _ρ_:
 
   ```math
   ρ = \mathrm{9.91\!×\!{10}^{-28} \, kg} \;\; \frac{P - aT^4/3}{k_\text{B}T},
@@ -71,19 +68,9 @@ The key variables are the radial coordinate ``r``; ``M_r``, the mass interior to
     + \mathrm{6.44\!×\!{10}^{18} \, \frac{m^2}{kg}} \left(\frac{ρ}{1\,\mathrm{kg/m^3}}\right) \left(\frac{T}{1\,\mathrm{K}}\right)^{-3.5},
   ```
 
-- The radiation constant, _a_:
+- The radiation constant, ``a = \mathrm{7.565×{10}^{-16} \, J\,m^{-3}\,K^{-4}}``,
 
-  ```math
-  a = \mathrm{7.565\!×\!{10}^{-16} \, \frac{J}{m^3\,K^4}},
-  ```
-
-- The specific luminosity, _ε_:
-
-  ```math
-  ε = \mathrm{0.136 \, \frac{W}{kg}} \left(\tilde{ε}_0 + 3.49\!×\!{10}^{12} \tilde{ε}_1 \right), \\[1ex]
-  ```
-
-  where, in turn,
+- The specific luminosity, ``ε = \mathrm{0.136 \, W\,kg^{-1}} \left(\tilde{ε}_0 + 3.49\!×\!{10}^{12} \tilde{ε}_1 \right)``, where, in turn,
 
   ```math
   \begin{align*}
@@ -93,40 +80,9 @@ The key variables are the radial coordinate ``r``; ``M_r``, the mass interior to
   ```
 """
 
-# ╔═╡ d61d868e-7edd-46fc-9994-9c1af60b4cc9
-md"""
-The above formulae all use SI units, T₆ ≡ T / (10⁶ K), and the constants ``c`` and ``k_\text{B}`` have their usual values. These have been calculated assuming a primordial star that is 75% hydrogen and 25% helium by mass, and which is fully ionized throughout. This problem is another boundary value problem. Take a primordial Population-III (i.e. pure H/He) star whose mass is ``100 M_⊙``. At its surface you have ``M_r = M_* = 100 M_⊙``, and ``P = 0``. At its core you have ``L_r = r = 0``.
-"""
-
-# ╔═╡ cd9324f0-87be-4e56-b440-955f1fae11ea
-const a = 4σ/c |> (J*m^-3*K^-4)
-
-# ╔═╡ 817a6fc5-b327-48ea-9cda-4a4217931cc9
-const ρ₀ = 9.91e-28kg
-
-# ╔═╡ 9e69b9d6-08e1-4a83-a5ea-102620bdd674
-density(P, T) = ρ₀ * (P - a*T^4/3) / (k_B*T)
-
 # ╔═╡ fd286a3b-b45c-4891-a1b3-7cf0ca6209fe
 """Mass absorption coefficient"""
 massabsorpcoeff(ρ, T) = (0.035 + 6.44e18 * ustrip(kg/m^3, ρ)/ustrip(K, T)^3.5) * m^2/kg;
-
-# ╔═╡ 366f153f-e666-45f1-b594-28d0b8381830
-function odefun(u, p, Mᵣ)
-    r, T, P, Lᵣ = u
-
-    ρ = density(P, T)
-    κ = massabsorpcoeff(ρ, T)
-
-    r′ = 1 / (4π*r^2*ρ) |> m/kg
-    T′ = -3/(64*π^2*a*c) * (κ*Lᵣ) / (T^3*r^4) |> K/kg
-    P′ = - G*Mᵣ / (4π*r^4) |> Pa/kg
-    Lᵣ′ = specificpower(ρ, T) |> W/kg
-
-    u′ = ArrayPartition([r′], [T′], [P′], [Lᵣ′])
-
-    return u′
-end
 
 # ╔═╡ a6728349-7323-4e11-a77b-3b05e61992a2
 function specificpower(ρ, T)
@@ -137,11 +93,10 @@ function specificpower(ρ, T)
     return 0.136W/kg * (ε̃₀ + 3.49e12 * ε̃₁)
 end
 
-# ╔═╡ 2267ba11-3424-48a5-b219-07ee3b2bc4d9
-const M_star = 100Msun
-
-# ╔═╡ e74e279d-8f51-4c3b-88a6-efffe6a9707e
-Mᵣ_domain = (0kg, M_star |> kg)
+# ╔═╡ d61d868e-7edd-46fc-9994-9c1af60b4cc9
+md"""
+The above formulae all use SI units, _T_₆ ≡ _T_ / (10⁶ K), and the constants ``c`` and ``k_\text{B}`` have their usual values. These have been calculated assuming a primordial star that is 75% hydrogen and 25% helium by mass, and which is fully ionized throughout. This problem is another boundary value problem. Take a primordial Population-III (i.e. pure H/He) star whose mass is ``100 M_⊙``. At its surface you have ``M_r = M_* = 100 M_⊙``, and ``P = 0``. At its core you have ``L_r = r = 0``.
+"""
 
 # ╔═╡ 04d0caf4-f307-47e5-9c2d-7b97da6e8f80
 md"""
@@ -152,28 +107,6 @@ md"""
 md"""
 Use the shooting method to estimate the core temperature and pressure of this star, to two significant figures each. I suggest you use RK4 as your ODE solver, with 100 steps between ``M_r = 0`` and ``M_r = M_*``. Your goal is to get ``P`` close to 0 at the surface without going negative (since pressure is a positive quantity). To guide your initial guess, the Sun's core temperature is 16 × 10⁶ K, and its core pressure is 1.2 × 10¹⁶ Pa.
 """
-
-# ╔═╡ e4fb8237-d81a-44c2-85f8-b44a0a11bd3c
-function stellarboundary(u, _, Mᵣ)
-    u₀ = u(0)
-    return ArrayPartition(
-        [u₀[1]],             # at the center, r = 0
-        [u(M_star)[3]],      # at the surface, P = 0
-        [u₀[4]],             # at the center, Lᵣ = 0
-    )
-end
-
-# ╔═╡ 6e5aa9ff-6879-4d04-9ce5-f47afa13e6e0
-function stellarboundary!(residual, u, p, Mᵣ)
-    u₀ = u(0)
-    residual[1] = u₀[1]         # at the center, r = 0
-    residual[2] = u(M_star)[3]  # at the surface, P = 0
-    residual[3] = u₀[4]         # at the center, Lᵣ = 0
-    return residual
-end
-
-# ╔═╡ 0bd8ee20-0491-465a-a07d-d88107b043b8
-
 
 # ╔═╡ 92fd50e9-dfdf-447c-ac60-fb46d0080dbc
 u₀_guess = ArrayPartition([0.1m], [16e6K], [1.2e16Pa], [0.1W])
@@ -209,6 +142,12 @@ md"""
 ## Constants reference
 """
 
+# ╔═╡ 7066ef95-8257-4950-a0a7-c15832e1725e
+TableOfContents()
+
+# ╔═╡ cd9324f0-87be-4e56-b440-955f1fae11ea
+const a = 4σ/c |> (J*m^-3*K^-4)
+
 # ╔═╡ 58810d44-0b8f-4f74-83b9-9b95605cd2e7
 σ
 
@@ -226,44 +165,80 @@ md"""
 Values specific to the problem:
 """
 
+# ╔═╡ 817a6fc5-b327-48ea-9cda-4a4217931cc9
+const M₀ = 9.91e-28kg
+
+# ╔═╡ 9e69b9d6-08e1-4a83-a5ea-102620bdd674
+density(P, T) = M₀ * (P - a*T^4/3) / (k_B*T)
+
+# ╔═╡ 366f153f-e666-45f1-b594-28d0b8381830
+function odefun(u, p, Mᵣ)
+    r, T, P, Lᵣ = u
+
+    ρ = density(P, T)
+    κ = massabsorpcoeff(ρ, T)
+
+    r′ = 1 / (4π*r^2*ρ) |> m/kg
+    T′ = -3/(64*π^2*a*c) * (κ*Lᵣ) / (T^3*r^4) |> K/kg
+    P′ = - G*Mᵣ / (4π*r^4) |> Pa/kg
+    Lᵣ′ = specificpower(ρ, T) |> W/kg
+
+    u′ = ArrayPartition([r′], [T′], [P′], [Lᵣ′])
+
+    return u′
+end
+
+# ╔═╡ 2267ba11-3424-48a5-b219-07ee3b2bc4d9
+const M_star = 100Msun
+
+# ╔═╡ e74e279d-8f51-4c3b-88a6-efffe6a9707e
+Mᵣ_domain = (0kg, M_star |> kg)
+
+# ╔═╡ e4fb8237-d81a-44c2-85f8-b44a0a11bd3c
+function stellarboundary(u, _, Mᵣ)
+    u₀ = u[0]
+    return ArrayPartition(
+        [u₀[1]],             # at the center, r = 0
+        [u(M_star)[3]],      # at the surface, P = 0
+        [u₀[4]],             # at the center, Lᵣ = 0
+    )
+end
+
 # ╔═╡ 6ac5b3da-c540-48ea-95b3-b51719ec36b1
-bvpfunction = TwoPointBVPFunction(odefun, stellarboundary)
+bvpfunction = BVPFunction(odefun, stellarboundary)
 
 # ╔═╡ d8af8e17-d953-41ec-ad1e-ed7c246e23ea
-bvproblem = TwoPointBVProblem(bvpfunction, u₀_guess, Mᵣ_domain)
-
-# ╔═╡ fb08e0b6-adea-4962-bdac-f69372e3e53e
-bvproblem |> Dump
+bvproblem = BVProblem(bvpfunction, u₀_guess, Mᵣ_domain)
 
 # ╔═╡ 79c2f0f9-5cb4-4a19-ac97-14d174825c50
 solution = solve(bvproblem, solver)
 
+# ╔═╡ 6e5aa9ff-6879-4d04-9ce5-f47afa13e6e0
+function stellarboundary!(residual, u, p, Mᵣ)
+    u₀ = u(0)
+    residual[1] = u₀[1]         # at the center, r = 0
+    residual[2] = u(M_star)[3]  # at the surface, P = 0
+    residual[3] = u₀[4]         # at the center, Lᵣ = 0
+    return residual
+end
+
 # ╔═╡ Cell order:
-# ╠═93698b5a-1f3b-4c47-9e67-aff44f234c0f
-# ╠═7066ef95-8257-4950-a0a7-c15832e1725e
-# ╠═1e6a2dc7-ff39-4463-a6d3-7a87ecc6ae53
-# ╠═81b35b32-2be1-4458-bf91-97780765a6fd
-# ╠═5550c36f-dcef-4d95-9c90-46e91d276d37
-# ╠═54f413fa-3a90-4e76-a192-75afa6a5bd6d
 # ╟─da3e18e3-0cda-440b-932e-7c09988e28dc
-# ╟─d61d868e-7edd-46fc-9994-9c1af60b4cc9
-# ╟─9ed8de43-cd5a-4e40-a8bb-b33038d80a8d
-# ╠═366f153f-e666-45f1-b594-28d0b8381830
 # ╟─03118617-5cca-4400-9e87-1562d42d7d44
+# ╠═366f153f-e666-45f1-b594-28d0b8381830
+# ╟─9ed8de43-cd5a-4e40-a8bb-b33038d80a8d
 # ╠═9e69b9d6-08e1-4a83-a5ea-102620bdd674
 # ╠═fd286a3b-b45c-4891-a1b3-7cf0ca6209fe
 # ╠═a6728349-7323-4e11-a77b-3b05e61992a2
+# ╟─d61d868e-7edd-46fc-9994-9c1af60b4cc9
 # ╠═e74e279d-8f51-4c3b-88a6-efffe6a9707e
-# ╠═2267ba11-3424-48a5-b219-07ee3b2bc4d9
 # ╟─04d0caf4-f307-47e5-9c2d-7b97da6e8f80
 # ╟─5885df68-9573-4651-9a05-5d0a5b18d747
 # ╠═e4fb8237-d81a-44c2-85f8-b44a0a11bd3c
 # ╠═6e5aa9ff-6879-4d04-9ce5-f47afa13e6e0
-# ╠═0bd8ee20-0491-465a-a07d-d88107b043b8
 # ╠═92fd50e9-dfdf-447c-ac60-fb46d0080dbc
 # ╠═6ac5b3da-c540-48ea-95b3-b51719ec36b1
 # ╠═d8af8e17-d953-41ec-ad1e-ed7c246e23ea
-# ╠═fb08e0b6-adea-4962-bdac-f69372e3e53e
 # ╠═13b416d0-39ef-40bb-8997-8e1b7226e10a
 # ╠═9d3e56a2-1eb3-46ad-baf9-fd4bb1f3e8de
 # ╠═79c2f0f9-5cb4-4a19-ac97-14d174825c50
@@ -273,6 +248,12 @@ solution = solve(bvproblem, solver)
 # ╟─d7db0d1a-92fc-4a43-8285-7438f8d6a8e1
 # ╠═ae5820a2-26c3-4bf7-9dd5-d136eaf35038
 # ╟─45caddb4-8dad-451a-a6dc-fcda9e087dfe
+# ╠═93698b5a-1f3b-4c47-9e67-aff44f234c0f
+# ╠═7066ef95-8257-4950-a0a7-c15832e1725e
+# ╠═1e6a2dc7-ff39-4463-a6d3-7a87ecc6ae53
+# ╠═81b35b32-2be1-4458-bf91-97780765a6fd
+# ╠═5550c36f-dcef-4d95-9c90-46e91d276d37
+# ╠═54f413fa-3a90-4e76-a192-75afa6a5bd6d
 # ╠═67dead86-da4e-482e-b87e-f87e51ff5e5b
 # ╠═329fa343-39e2-4a0b-adef-9c590a18f19c
 # ╠═cd9324f0-87be-4e56-b440-955f1fae11ea
@@ -282,3 +263,4 @@ solution = solve(bvproblem, solver)
 # ╠═b44185c8-9325-4aa9-a448-51ff08d95187
 # ╟─c68905f0-23ce-498d-a478-e6e41c19308b
 # ╠═817a6fc5-b327-48ea-9cda-4a4217931cc9
+# ╠═2267ba11-3424-48a5-b219-07ee3b2bc4d9
