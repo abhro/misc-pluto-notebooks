@@ -7,6 +7,18 @@ using InteractiveUtils
 # ╔═╡ 93698b5a-1f3b-4c47-9e67-aff44f234c0f
 using PlutoUI
 
+# ╔═╡ 1e6a2dc7-ff39-4463-a6d3-7a87ecc6ae53
+using BoundaryValueDiffEq
+
+# ╔═╡ 81b35b32-2be1-4458-bf91-97780765a6fd
+using RecursiveArrayTools
+
+# ╔═╡ 5550c36f-dcef-4d95-9c90-46e91d276d37
+using OrdinaryDiffEq: DP5
+
+# ╔═╡ 54f413fa-3a90-4e76-a192-75afa6a5bd6d
+using SciMLBase: TwoPointBVPFunction
+
 # ╔═╡ 67dead86-da4e-482e-b87e-f87e51ff5e5b
 begin
     using Unitful, UnitfulAstro
@@ -111,7 +123,7 @@ function odefun(u, p, Mᵣ)
     P′ = - G*Mᵣ / (4π*r^4) |> Pa/kg
     Lᵣ′ = specificpower(ρ, T) |> W/kg
 
-    u′ = [r′, T′, P′, Lᵣ′]
+    u′ = ArrayPartition([r′], [T′], [P′], [Lᵣ′])
 
     return u′
 end
@@ -140,6 +152,37 @@ md"""
 md"""
 Use the shooting method to estimate the core temperature and pressure of this star, to two significant figures each. I suggest you use RK4 as your ODE solver, with 100 steps between ``M_r = 0`` and ``M_r = M_*``. Your goal is to get ``P`` close to 0 at the surface without going negative (since pressure is a positive quantity). To guide your initial guess, the Sun's core temperature is 16 × 10⁶ K, and its core pressure is 1.2 × 10¹⁶ Pa.
 """
+
+# ╔═╡ e4fb8237-d81a-44c2-85f8-b44a0a11bd3c
+function stellarboundary(u, _, Mᵣ)
+    u₀ = u(0)
+    return ArrayPartition(
+        [u₀[1]],             # at the center, r = 0
+        [u(M_star)[3]],      # at the surface, P = 0
+        [u₀[4]],             # at the center, Lᵣ = 0
+    )
+end
+
+# ╔═╡ 6e5aa9ff-6879-4d04-9ce5-f47afa13e6e0
+function stellarboundary!(residual, u, p, Mᵣ)
+    u₀ = u(0)
+    residual[1] = u₀[1]         # at the center, r = 0
+    residual[2] = u(M_star)[3]  # at the surface, P = 0
+    residual[3] = u₀[4]         # at the center, Lᵣ = 0
+    return residual
+end
+
+# ╔═╡ 0bd8ee20-0491-465a-a07d-d88107b043b8
+
+
+# ╔═╡ 92fd50e9-dfdf-447c-ac60-fb46d0080dbc
+u₀_guess = ArrayPartition([0.1m], [16e6K], [1.2e16Pa], [0.1W])
+
+# ╔═╡ 13b416d0-39ef-40bb-8997-8e1b7226e10a
+solver = Shooting(DP5())
+
+# ╔═╡ 9d3e56a2-1eb3-46ad-baf9-fd4bb1f3e8de
+# odefun()
 
 # ╔═╡ 0d32114c-f8a7-4a09-8a8a-23e18f89b259
 md"""
@@ -183,14 +226,30 @@ md"""
 Values specific to the problem:
 """
 
+# ╔═╡ 6ac5b3da-c540-48ea-95b3-b51719ec36b1
+bvpfunction = TwoPointBVPFunction(odefun, stellarboundary)
+
+# ╔═╡ d8af8e17-d953-41ec-ad1e-ed7c246e23ea
+bvproblem = TwoPointBVProblem(bvpfunction, u₀_guess, Mᵣ_domain)
+
+# ╔═╡ fb08e0b6-adea-4962-bdac-f69372e3e53e
+bvproblem |> Dump
+
+# ╔═╡ 79c2f0f9-5cb4-4a19-ac97-14d174825c50
+solution = solve(bvproblem, solver)
+
 # ╔═╡ Cell order:
 # ╠═93698b5a-1f3b-4c47-9e67-aff44f234c0f
 # ╠═7066ef95-8257-4950-a0a7-c15832e1725e
+# ╠═1e6a2dc7-ff39-4463-a6d3-7a87ecc6ae53
+# ╠═81b35b32-2be1-4458-bf91-97780765a6fd
+# ╠═5550c36f-dcef-4d95-9c90-46e91d276d37
+# ╠═54f413fa-3a90-4e76-a192-75afa6a5bd6d
 # ╟─da3e18e3-0cda-440b-932e-7c09988e28dc
-# ╟─03118617-5cca-4400-9e87-1562d42d7d44
 # ╟─d61d868e-7edd-46fc-9994-9c1af60b4cc9
 # ╟─9ed8de43-cd5a-4e40-a8bb-b33038d80a8d
 # ╠═366f153f-e666-45f1-b594-28d0b8381830
+# ╟─03118617-5cca-4400-9e87-1562d42d7d44
 # ╠═9e69b9d6-08e1-4a83-a5ea-102620bdd674
 # ╠═fd286a3b-b45c-4891-a1b3-7cf0ca6209fe
 # ╠═a6728349-7323-4e11-a77b-3b05e61992a2
@@ -198,6 +257,16 @@ Values specific to the problem:
 # ╠═2267ba11-3424-48a5-b219-07ee3b2bc4d9
 # ╟─04d0caf4-f307-47e5-9c2d-7b97da6e8f80
 # ╟─5885df68-9573-4651-9a05-5d0a5b18d747
+# ╠═e4fb8237-d81a-44c2-85f8-b44a0a11bd3c
+# ╠═6e5aa9ff-6879-4d04-9ce5-f47afa13e6e0
+# ╠═0bd8ee20-0491-465a-a07d-d88107b043b8
+# ╠═92fd50e9-dfdf-447c-ac60-fb46d0080dbc
+# ╠═6ac5b3da-c540-48ea-95b3-b51719ec36b1
+# ╠═d8af8e17-d953-41ec-ad1e-ed7c246e23ea
+# ╠═fb08e0b6-adea-4962-bdac-f69372e3e53e
+# ╠═13b416d0-39ef-40bb-8997-8e1b7226e10a
+# ╠═9d3e56a2-1eb3-46ad-baf9-fd4bb1f3e8de
+# ╠═79c2f0f9-5cb4-4a19-ac97-14d174825c50
 # ╟─0d32114c-f8a7-4a09-8a8a-23e18f89b259
 # ╟─ce125c69-bc40-42d0-9ded-937257c9bc39
 # ╟─d5d6964c-0f6c-4d20-b97a-c6b8aab857d7
