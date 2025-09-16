@@ -14,7 +14,7 @@ md"""
 
 # ╔═╡ bf129681-b331-43f7-969a-a8b281e692e6
 md"""
-from https://book.magneticearth.org/geomag-obs-models/03a_magnetic-field-line-tracing
+from <https://book.magneticearth.org/geomag-obs-models/03a_magnetic-field-line-tracing>
 """
 
 # ╔═╡ f24a0c98-e085-4ba5-8601-c2c35f7edf78
@@ -94,7 +94,15 @@ clines  = [:red, :blue, :grey, :purple, :brown, :purple, :pink, :orange, :magent
 
 # ╔═╡ 347ae72c-0d1a-4a65-b019-94957e5cdcf9
 let fig = Figure()
-    ax = Axis(fig[1,1], xlabel = "Earth radii", ylabel = "Earth radii")
+    ax = Axis(
+        fig[1,1];
+        xlabel = "Earth radii",
+        ylabel = "Earth radii",
+        xminorgridvisible = true,
+        yminorgridvisible = true,
+        xminorticksvisible = true,
+        yminorticksvisible = true,
+    )
 
     poly!(Circle(Point2f(0,0), r0), color = :lightgrey) # Plot the Earth
 
