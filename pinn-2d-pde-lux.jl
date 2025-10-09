@@ -69,22 +69,22 @@ md"""
 
 # ╔═╡ 4de2cde0-8af0-44fc-a2fd-dc8aacfdb607
 create_mlp(activation, hidden_dims) = Chain(
-	Dense(3 => hidden_dims, activation),
-	Dense(hidden_dims => hidden_dims, activation),
-	Dense(hidden_dims => hidden_dims, activation),
-	Dense(hidden_dims => 1))
+    Dense(3 => hidden_dims, activation),
+    Dense(hidden_dims => hidden_dims, activation),
+    Dense(hidden_dims => hidden_dims, activation),
+    Dense(hidden_dims => 1))
 
 # ╔═╡ 8c3e3a18-e99f-4cc5-a50f-102c86be019d
 begin
-	struct PINN{U, V, W} <: Lux.AbstractLuxContainerLayer{(:u, :v, :w)}
-		u::U
-		v::V
-		w::W
-	end
-	PINN(; hidden_dims::Int = 32) = PINN(
-		create_mlp(tanh, hidden_dims),
-		create_mlp(tanh, hidden_dims),
-		create_mlp(tanh, hidden_dims))
+    struct PINN{U, V, W} <: Lux.AbstractLuxContainerLayer{(:u, :v, :w)}
+        u::U
+        v::V
+        w::W
+    end
+    PINN(; hidden_dims::Int = 32) = PINN(
+        create_mlp(tanh, hidden_dims),
+        create_mlp(tanh, hidden_dims),
+        create_mlp(tanh, hidden_dims))
 end
 
 # ╔═╡ e9c6ec31-22c0-4de6-a4be-ecbf6fc4d2bf
@@ -94,28 +94,28 @@ md"""
 
 # ╔═╡ c7ce3ed4-6e94-4eb3-9282-be820a0cf8e9
 """
-	PILoss(u, v, w, xyt::AbstractArray)
+    PILoss(u, v, w, xyt::AbstractArray)
 
 Physics informed loss function. `u`, `v`, `w` must be a `StatefulLuxLayer`.
 """
 @views function PILoss(
-	u::StatefulLuxLayer, v::StatefulLuxLayer, w::StatefulLuxLayer,
-	xyt::AbstractArray)
+    u::StatefulLuxLayer, v::StatefulLuxLayer, w::StatefulLuxLayer,
+    xyt::AbstractArray)
 
-	∇u = Zygote.gradient(sum ∘ u, xyt) |> only
-	∂u_∂x, ∂u_∂y, ∂u_∂t = ∇u[1:1, :], ∇u[2:2, :], ∇u[3:3, :]
+    ∇u = Zygote.gradient(sum ∘ u, xyt) |> only
+    ∂u_∂x, ∂u_∂y, ∂u_∂t = ∇u[1:1, :], ∇u[2:2, :], ∇u[3:3, :]
 
-	∂v_∂x = (Zygote.gradient(sum ∘ v, xyt) |> only)[1:1, :]
-	v_xyt = v(xyt)
+    ∂v_∂x = (Zygote.gradient(sum ∘ v, xyt) |> only)[1:1, :]
+    v_xyt = v(xyt)
 
-	∂w_∂y = (Zygote.gradient(sum ∘ w, xyt) |> only)[2:2, :]
-	w_xyt = w(xyt)
+    ∂w_∂y = (Zygote.gradient(sum ∘ w, xyt) |> only)[2:2, :]
+    w_xyt = w(xyt)
 
-	return (
-		mean(abs2, ∂u_∂t - ∂v_∂x - ∂w_∂y) +
-		mean(abs2, v_xyt - ∂u_∂x) +
-		mean(abs2, w_xyt - ∂u_∂y)
-	)
+    return (
+        mean(abs2, ∂u_∂t - ∂v_∂x - ∂w_∂y) +
+        mean(abs2, v_xyt - ∂u_∂x) +
+        mean(abs2, w_xyt - ∂u_∂y)
+    )
 end
 
 # ╔═╡ c5627c81-aadf-4411-92b3-5ae1a5d72555
@@ -125,24 +125,24 @@ Additionally, we need to compute the loss with respect to the boundary condition
 
 # ╔═╡ 64192143-4d35-4ec6-bd49-fccb17145bc1
 mse_loss_function(
-	u::StatefulLuxLayer, target::AbstractArray, xyt::AbstractArray
+    u::StatefulLuxLayer, target::AbstractArray, xyt::AbstractArray
 ) = MSELoss()(u(xyt), target);
 
 # ╔═╡ 0889cc63-78a2-4dbb-81cd-17401c936ec2
 function loss_function(model, ps, st, (xyt, target, xyt_bc, target_bc))
-	u_net = StatefulLuxLayer{true}(model.u, ps.u, st.u)
-	v_net = StatefulLuxLayer{true}(model.v, ps.v, st.v)
-	w_net = StatefulLuxLayer{true}(model.v, ps.w, st.w)
-	physics_loss = PILoss(u_net, v_net, w_net, xyt)
-	data_loss = mse_loss_function(u_net, target, xyt)
-	bc_loss = mse_loss_function(u_net, target_bc, xyt_bc)
-	loss = physics_loss + data_loss + bc_loss
+    u_net = StatefulLuxLayer{true}(model.u, ps.u, st.u)
+    v_net = StatefulLuxLayer{true}(model.v, ps.v, st.v)
+    w_net = StatefulLuxLayer{true}(model.v, ps.w, st.w)
+    physics_loss = PILoss(u_net, v_net, w_net, xyt)
+    data_loss = mse_loss_function(u_net, target, xyt)
+    bc_loss = mse_loss_function(u_net, target_bc, xyt_bc)
+    loss = physics_loss + data_loss + bc_loss
 
-	return (
-		loss,
-		(; u = u_net.st, v = v_net.st, w = w_net.st),
-		(; physics_loss, data_loss, bc_loss),
-	)
+    return (
+        loss,
+        (; u = u_net.st, v = v_net.st, w = w_net.st),
+        (; physics_loss, data_loss, bc_loss),
+    )
 end
 
 # ╔═╡ edcf06cb-247e-4446-94bd-28c9cfbf11f1
@@ -176,13 +176,13 @@ x = y = t = range(0.0f0, 2.0f0; length = bc_len);
 
 # ╔═╡ ed721e8b-eb50-4d36-b293-9ab7fc1cf31c
 xyt_bc = hcat(
-	stack((x, y, zeros(Float32, bc_len)), dims = 1),
+    stack((x, y, zeros(Float32, bc_len)), dims = 1),
 
-	stack((zeros(Float32, bc_len), y, t), dims = 1),
-	stack((2ones(Float32, bc_len), y, t), dims = 1),
+    stack((zeros(Float32, bc_len), y, t), dims = 1),
+    stack((2ones(Float32, bc_len), y, t), dims = 1),
 
-	stack((x, zeros(Float32, bc_len), t), dims = 1),
-	stack((x, 2ones(Float32, bc_len), t), dims = 1)
+    stack((x, zeros(Float32, bc_len), t), dims = 1),
+    stack((x, 2ones(Float32, bc_len), t), dims = 1)
 )
 
 # ╔═╡ 46cf6020-33c8-4354-bd4e-164c8743c5e0
@@ -196,9 +196,9 @@ min_data, max_data = extrema(target_data)
 
 # ╔═╡ c65994ca-0e8b-4c72-85df-c62fb7306461
 begin
-	"""Apply min-max normalization"""
-	minmaxnormalize(a, min, max) = (a .- min) / (max - min)
-	minmaxnormalize(a) = (a .- minimum(a)) / (maximum(a) - minimum(a))
+    """Apply min-max normalization"""
+    minmaxnormalize(a, min, max) = (a .- min) / (max - min)
+    minmaxnormalize(a) = (a .- minimum(a)) / (maximum(a) - minimum(a))
 end
 
 # ╔═╡ 613cdd28-f832-4763-8cef-173c074b51d6
@@ -223,66 +223,66 @@ md"""
 
 # ╔═╡ ddd1cbc7-7f1e-4a93-9f4f-07f5a4288a95
 function train_model(
-	xyt, target_data, xyt_bc, target_bc;
-	seed::Int = 0, maxiters::Int = 50_000, hidden_dims::Int = 32)
+    xyt, target_data, xyt_bc, target_bc;
+    seed::Int = 0, maxiters::Int = 50_000, hidden_dims::Int = 32)
 
-	rng = Random.default_rng()
-	Random.seed!(rng, seed)
+    rng = Random.default_rng()
+    Random.seed!(rng, seed)
 
-	pinn = PINN(; hidden_dims)
-	ps, st = Lux.setup(rng, pinn) |> gdev
+    pinn = PINN(; hidden_dims)
+    ps, st = Lux.setup(rng, pinn) |> gdev
 
-	bc_dataloader = DataLoader((xyt_bc, target_bc), batchsize = 32, shuffle = true) |> gdev
-	pde_dataloader = DataLoader((xyt, target_data), batchsize = 32, shuffle = true) |> gdev
+    bc_dataloader = DataLoader((xyt_bc, target_bc), batchsize = 32, shuffle = true) |> gdev
+    pde_dataloader = DataLoader((xyt, target_data), batchsize = 32, shuffle = true) |> gdev
 
-	train_state = Training.TrainState(pinn, ps, st, Adam(5f-2))
-	# adaptive learning rate
-	lr = i -> i < 5000 ? 5f-2 : (i < 10_000 ? 5f-3 : 5f-4)
+    train_state = Training.TrainState(pinn, ps, st, Adam(5f-2))
+    # adaptive learning rate
+    lr = i -> i < 5000 ? 5f-2 : (i < 10_000 ? 5f-3 : 5f-4)
 
-	total_loss_tracker, physics_loss_tracker, data_loss_tracker, bc_loss_tracker = ntuple(
-		_ -> Lag(Float32, 32), 4)
+    total_loss_tracker, physics_loss_tracker, data_loss_tracker, bc_loss_tracker = ntuple(
+        _ -> Lag(Float32, 32), 4)
 
-	iter = 1
-	dataiterator = zip(
-		Iterators.cycle(pde_dataloader), Iterators.cycle(bc_dataloader))
+    iter = 1
+    dataiterator = zip(
+        Iterators.cycle(pde_dataloader), Iterators.cycle(bc_dataloader))
 
-	for ((xyt_batch, u_batch), (xyt_bc_batch, u_bc_batch)) in dataiterator
+    for ((xyt_batch, u_batch), (xyt_bc_batch, u_bc_batch)) in dataiterator
 
-		Optimisers.adjust!(train_state, lr(iter))
+        Optimisers.adjust!(train_state, lr(iter))
 
-		_, loss, stats, train_state = Training.single_train_step!(
-			AutoZygote(), loss_function,
-			(xyt_batch, u_batch, xyt_bc_batch, u_bc_batch),
-			train_state)
+        _, loss, stats, train_state = Training.single_train_step!(
+            AutoZygote(), loss_function,
+            (xyt_batch, u_batch, xyt_bc_batch, u_bc_batch),
+            train_state)
 
-		fit!(total_loss_tracker, loss)
-		fit!(physics_loss_tracker, stats.physics_loss)
-		fit!(data_loss_tracker, stats.data_loss)
-		fit!(bc_loss_tracker, stats.bc_loss)
+        fit!(total_loss_tracker, loss)
+        fit!(physics_loss_tracker, stats.physics_loss)
+        fit!(data_loss_tracker, stats.data_loss)
+        fit!(bc_loss_tracker, stats.bc_loss)
 
-		mean_loss = mean(OnlineStats.value(total_loss_tracker))
-		mean_physics_loss = mean(OnlineStats.value(physics_loss_tracker))
-		mean_data_loss = mean(OnlineStats.value(data_loss_tracker))
-		mean_bc_loss = mean(OnlineStats.value(bc_loss_tracker))
+        mean_loss = mean(OnlineStats.value(total_loss_tracker))
+        mean_physics_loss = mean(OnlineStats.value(physics_loss_tracker))
+        mean_data_loss = mean(OnlineStats.value(data_loss_tracker))
+        mean_bc_loss = mean(OnlineStats.value(bc_loss_tracker))
 
-		isnan(loss) && throw(ArgumentError("NaN Loss Detected"))
+        isnan(loss) && throw(ArgumentError("NaN Loss Detected"))
 
-		if iter == 1 || iter % 1000 == 0 || iter == maxiters
-			@info(@sprintf(
-				"Iteration: [%5d / %5d] \t Loss: %.9f (%.9f) \t Physics Loss: %.9f (%.9f) \t Data Loss: %.9F (%.9f) \t BC Loss: %.9f (%.9f))",
-				iter, maxiters, loss, mean_loss,
-				stats.physics_loss, mean_physics_loss,
-				stats.data_loss, mean_data_loss,
-				stats.bc_loss, mean_bc_loss
-			))
-		end
+        if iter == 1 || iter % 1000 == 0 || iter == maxiters
+            @info(@sprintf(
+                "Iteration: [%5d / %5d] \t Loss: %.9f (%.9f) \t Physics Loss: %.9f (%.9f) \t Data Loss: %.9F (%.9f) \t BC Loss: %.9f (%.9f))",
+                iter, maxiters, loss, mean_loss,
+                stats.physics_loss, mean_physics_loss,
+                stats.data_loss, mean_data_loss,
+                stats.bc_loss, mean_bc_loss
+            ))
+        end
 
-		iter ≥ maxiters && break
-		iter += 1
-	end
+        iter ≥ maxiters && break
+        iter += 1
+    end
 
-	return StatefulLuxLayer{true}(
-		pinn, cdev(train_state.parameters), cdev(train_state.states))
+    return StatefulLuxLayer{true}(
+        pinn, cdev(train_state.parameters), cdev(train_state.states))
 end
 
 # ╔═╡ 4fe21a00-c083-4fd6-a695-c52240c3a060
@@ -290,7 +290,7 @@ trained_model = train_model(xyt_scaled, target_data_scaled, xyt_bc_scaled, targe
 
 # ╔═╡ b67d7b58-c79a-45bc-a92e-81be68febf2d
 trained_u = Lux.testmode(StatefulLuxLayer{true}(
-	trained_model.model.u, trained_model.ps.u, trained_model.st.u))
+    trained_model.model.u, trained_model.ps.u, trained_model.st.u))
 
 # ╔═╡ 34efddda-66e0-4541-899c-beb7504a8362
 md"""
@@ -314,24 +314,24 @@ viz_grid_scaled = minmaxnormalize(viz_grid)
 
 # ╔═╡ c86af698-884d-46d2-8f29-6d0ce7e7d56e
 u_pred = (
-	reshape(trained_u(viz_grid_scaled), length(xs), length(ys), length(ts))
+    reshape(trained_u(viz_grid_scaled), length(xs), length(ys), length(ts))
 ) * (max_pde_val - min_pde_val) .+ min_pde_val
 
 # ╔═╡ dc8bbc94-9454-4336-a0ee-12085884c5f0
 let fig = Figure()
-	ax = Axis(fig[1, 1], xlabel = "x", ylabel = "y")
-	errs = [abs.(u_pred[:,:,i] - u_real[:,:,i]) for i in eachindex(ts)]
-	Colorbar(fig[1,2], limits = extrema(stack(errs)))
+    ax = Axis(fig[1, 1], xlabel = "x", ylabel = "y")
+    errs = [abs.(u_pred[:,:,i] - u_real[:,:,i]) for i in eachindex(ts)]
+    Colorbar(fig[1,2], limits = extrema(stack(errs)))
 
-	CairoMakie.record(fig, "pinn_nested_ad.gif", eachindex(ts), framerate = 5) do i
-		ax.title = @sprintf("Abs. Predictor Error | Time: %.2f", ts[i])
-		err = errs[i]
-		contour!(ax, xs, ys, err; levels = 10, linewidth = 2)
-		heatmap!(ax, xs, ys, err)
-		return fig
-	end
+    CairoMakie.record(fig, "pinn_nested_ad.gif", eachindex(ts), framerate = 5) do i
+        ax.title = @sprintf("Abs. Predictor Error | Time: %.2f", ts[i])
+        err = errs[i]
+        contour!(ax, xs, ys, err; levels = 10, linewidth = 2)
+        heatmap!(ax, xs, ys, err)
+        return fig
+    end
 
-	fig
+    fig
 end
 
 # ╔═╡ 8f3b2acc-3440-4abb-a94e-ae14b6d0b05f
@@ -349,15 +349,15 @@ InteractiveUtils.versioninfo |> with_terminal
 
 # ╔═╡ e35fa2b5-3e77-4976-b398-d22a0f62b4c3
 with_terminal() do
-	if @isdefined(MLDataDevices)
-		if @isdefined(CUDA) && MLDataDevices.functional(CUDADevice)
-			CUDA.versioninfo()
-		end
+    if @isdefined(MLDataDevices)
+        if @isdefined(CUDA) && MLDataDevices.functional(CUDADevice)
+            CUDA.versioninfo()
+        end
 
-		if @isdefined(AMDGPU) && MLDataDevices.functional(AMDGPUDevice)
-			AMDGPU.versioninfo()
-		end
-	end
+        if @isdefined(AMDGPU) && MLDataDevices.functional(AMDGPUDevice)
+            AMDGPU.versioninfo()
+        end
+    end
 end
 
 # ╔═╡ 5691fa54-6c11-43e9-89eb-420964841da0

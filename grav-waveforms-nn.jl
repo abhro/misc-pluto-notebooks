@@ -54,179 +54,179 @@ md"""
 
 # ╔═╡ 892ab4fe-d722-4be2-800e-c8bb0b27ea0c
 function one2two(path, m₁, m₂)
-	M = m₁ + m₂
-	r₁ = m₂ / M .* path
-	r₂ = -m₁ / M .* path
-	return r₁, r₂
+    M = m₁ + m₂
+    r₁ = m₂ / M .* path
+    r₂ = -m₁ / M .* path
+    return r₁, r₂
 end
 
 # ╔═╡ f4424715-54a1-458b-9574-358d08239b76
 @views function soln2orbit(soln, model_params = nothing)
-	if size(soln, 1) ∉ [2, 4]
-		throw(ArgumentError("size(soln, 1) must be either 2 or 4"))
-	end
+    if size(soln, 1) ∉ [2, 4]
+        throw(ArgumentError("size(soln, 1) must be either 2 or 4"))
+    end
 
-	if size(soln, 1) == 2
-		χ = soln[1,:]
-		φ = soln[2,:]
+    if size(soln, 1) == 2
+        χ = soln[1,:]
+        φ = soln[2,:]
 
-		if length(model_params) != 3
-			throw(ArgumentError("length(model_params) must be 3 when size(soln, 1) == 2"))
-		end
-		p, M, e = model_params
-	else
-		χ = soln[1,:]
-		φ = soln[2,:]
-		p = soln[3,:]
-		e = soln[4,:]
-	end
+        if length(model_params) != 3
+            throw(ArgumentError("length(model_params) must be 3 when size(soln, 1) == 2"))
+        end
+        p, M, e = model_params
+    else
+        χ = soln[1,:]
+        φ = soln[2,:]
+        p = soln[3,:]
+        e = soln[4,:]
+    end
 
-	r = @. p / (1 + e * cos(χ))
-	x = @. r * cos(φ)
-	y = @. r * sin(φ)
+    r = @. p / (1 + e * cos(χ))
+    x = @. r * cos(φ)
+    y = @. r * sin(φ)
 
-	orbit = vcat(x', y')
-	return orbit
+    orbit = vcat(x', y')
+    return orbit
 end
 
 # ╔═╡ 01a7e22c-4ace-4653-91ae-dcb5632340ec
 """
-	Dₜ(v::AbstractVector, Δt)
+    Dₜ(v::AbstractVector, Δt)
 
 Approximate derivative with respect to t.
 """
 function Dₜ(v::AbstractVector, Δt)
-	weights = SVector(3/2, -2, 1/2)
-	a = -weights' * v[begin:begin+2]
-	b = (v[begin+2:end] - v[begin:end-2]) / 2
-	c = weights' * v[end:-1:end-2]
-	return [a; b; c] / Δt
+    weights = SVector(3/2, -2, 1/2)
+    a = -weights' * v[begin:begin+2]
+    b = (v[begin+2:end] - v[begin:end-2]) / 2
+    c = weights' * v[end:-1:end-2]
+    return [a; b; c] / Δt
 end
 
 # ╔═╡ 1a390f0c-fdff-482a-bb99-e01232796622
 """
-	Dₜ²(v::AbstractVector, Δt)
+    Dₜ²(v::AbstractVector, Δt)
 
 Approximate second derivative with respect to t.
 """
 function Dₜ²(v::AbstractVector, Δt)
-	weights = SVector(2, -5, 4, -1)
-	a = weights' * v[begin:begin+3]
-	b = v[begin:end-2] - 2 * v[begin+1:end-1] + v[begin+2:end]
-	c = weights' * v[end:-1:end-3]
-	return [a; b; c] / Δt^2
+    weights = SVector(2, -5, 4, -1)
+    a = weights' * v[begin:begin+3]
+    b = v[begin:end-2] - 2 * v[begin+1:end-1] + v[begin+2:end]
+    c = weights' * v[end:-1:end-3]
+    return [a; b; c] / Δt^2
 end
 
 # ╔═╡ b1616d12-ba27-4c57-861a-2a1fc11f3ce7
 function orbit2tensor(orbit, component, mass = 1)
-	x = orbit[1, :]
-	y = orbit[2, :]
+    x = orbit[1, :]
+    y = orbit[2, :]
 
-	lxx = x .^ 2
-	lyy = y .^ 2
-	lxy = x .* y
-	trace = lxx .+ lyy
+    lxx = x .^ 2
+    lyy = y .^ 2
+    lxy = x .* y
+    trace = lxx .+ lyy
 
-	if component[1] == 1 && component[2] == 1
-		tmp = lxx - trace/3
-	elseif component[1] == 2 && component[2] == 2
-		tmp = lyy - trace/3
-	else
-		tmp = lxy
-	end
+    if component[1] == 1 && component[2] == 1
+        tmp = lxx - trace/3
+    elseif component[1] == 2 && component[2] == 2
+        tmp = lyy - trace/3
+    else
+        tmp = lxy
+    end
 
-	return mass .* tmp
+    return mass .* tmp
 end
 
 # ╔═╡ 1a63dc3c-0a87-4303-a894-142ff80bc802
 function h_22_quadrupole_components(Δt, orbit, component, mass = 1)
-	M = orbit2tensor(orbit, component, mass) # mass tensor
-	return 2 * Dₜ²(M, Δt)
+    M = orbit2tensor(orbit, component, mass) # mass tensor
+    return 2 * Dₜ²(M, Δt)
 end
 
 # ╔═╡ 5e54004d-c021-4ffc-863e-1ad0f9c057a0
 begin
 """
-	h_22_quadrupole(Δt, orbit, mass = 1)
+    h_22_quadrupole(Δt, orbit, mass = 1)
 
 One-body quadrupole
 """
 function h_22_quadrupole(Δt, orbit, mass = 1)
-	h11 = h_22_quadrupole_components(Δt, orbit, (1, 1), mass)
-	h22 = h_22_quadrupole_components(Δt, orbit, (2, 2), mass)
-	h12 = h_22_quadrupole_components(Δt, orbit, (1, 2), mass)
+    h11 = h_22_quadrupole_components(Δt, orbit, (1, 1), mass)
+    h22 = h_22_quadrupole_components(Δt, orbit, (2, 2), mass)
+    h12 = h_22_quadrupole_components(Δt, orbit, (1, 2), mass)
 
-	return h11, h12, h22
+    return h11, h12, h22
 end
 
 """
-	h_22_quadrupole(Δt, orbit1, mass1, orbit2, mass2)
+    h_22_quadrupole(Δt, orbit1, mass1, orbit2, mass2)
 
 Two-body quadrupole
 """
 function h_22_quadrupole(Δt, orbit1, mass1, orbit2, mass2)
-	return (
-		h_22_quadrupole(Δt, orbit1, mass1)
-		.+
-		h_22_quadrupole(Δt, orbit2, mass2)
-	)
+    return (
+        h_22_quadrupole(Δt, orbit1, mass1)
+        .+
+        h_22_quadrupole(Δt, orbit2, mass2)
+    )
 end
 end;
 
 # ╔═╡ a63a0e20-d150-428c-9241-8c5d9c5f6b87
 begin
 """
-	h_22_strain(Δt, orbit)
+    h_22_strain(Δt, orbit)
 One-body strain
 """
 function h_22_strain(Δt::T, orbit) where {T}
-	h11, h12, h22 = h_22_quadrupole(Δt, orbit)
+    h11, h12, h22 = h_22_quadrupole(Δt, orbit)
 
-	h₊ = h11 - h22
-	hₓ = T(2) * h12
+    h₊ = h11 - h22
+    hₓ = T(2) * h12
 
-	scale = √(T(π) / 5)
-	return scale * h₊, -scale * hₓ
+    scale = √(T(π) / 5)
+    return scale * h₊, -scale * hₓ
 end
 
 """
-	h_22_strain(Δt, orbit1, mass1, orbit2, mass2)
+    h_22_strain(Δt, orbit1, mass1, orbit2, mass2)
 
 Two-body strain
 """
 function h_22_strain(Δt::T, orbit1, mass1, orbit2, mass2) where {T}
-	if abs(mass1 + mass2 - 1.0) > 1e-12
-		throw(ArgumentError("masses do not sum to unity"))
-	end
+    if abs(mass1 + mass2 - 1.0) > 1e-12
+        throw(ArgumentError("masses do not sum to unity"))
+    end
 
-	h11, h12, h22 = h_22_quadrupole(Δt, orbit1, mass1, orbit2, mass2)
+    h11, h12, h22 = h_22_quadrupole(Δt, orbit1, mass1, orbit2, mass2)
 
-	h₊ = h11 - h22
-	hₓ = T(2) * h12
+    h₊ = h11 - h22
+    hₓ = T(2) * h12
 
-	scale = √(T(π) / 5)
-	return scale * h₊, -scale * hₓ
+    scale = √(T(π) / 5)
+    return scale * h₊, -scale * hₓ
 end
 end;
 
 # ╔═╡ be1d332a-8e6e-4ff9-8b4c-b93e7b8c9da8
 function compute_waveform(Δt::T, soln, mass_ratio, model_params = nothing) where {T}
-	mass_ratio > 1 && throw(DomainError(mass_ratio, "mass_ratio must be ≤ 1"))
-	mass_ratio < 0 && throw(DomainError(mass_ratio, "mass_ratio must be non-negative"))
+    mass_ratio > 1 && throw(DomainError(mass_ratio, "mass_ratio must be ≤ 1"))
+    mass_ratio < 0 && throw(DomainError(mass_ratio, "mass_ratio must be non-negative"))
 
-	orbit = soln2orbit(soln, model_params)
+    orbit = soln2orbit(soln, model_params)
 
-	if mass_ratio > 0
-		m₂ = inv(one(T) + mass_ratio)
-		m₁ = mass_ratio * m₂
+    if mass_ratio > 0
+        m₂ = inv(one(T) + mass_ratio)
+        m₁ = mass_ratio * m₂
 
-		orbit₁, orbit₂ = one2two(orbit, m₁, m₂)
-		waveform = h_22_strain(Δt, orbit₁, m₁, orbit₂, m₂)
-	else
-		waveform = h_22_strain(Δt, orbit)
-	end
+        orbit₁, orbit₂ = one2two(orbit, m₁, m₂)
+        waveform = h_22_strain(Δt, orbit₁, m₁, orbit₂, m₂)
+    else
+        waveform = h_22_strain(Δt, orbit)
+    end
 
-	return waveform
+    return waveform
 end
 
 # ╔═╡ 48fdc879-a635-4d0e-ace1-8b26e7a0bb4a
@@ -236,18 +236,18 @@ md"""
 
 # ╔═╡ c3e6e4c8-99a1-4750-b6e6-6f8b2f1f3c7a
 function RelativisticOrbitModel(u, (; p, M, e), t)
-	χ, φ = u
+    χ, φ = u
 
-	scale = (
-		(p - 2 - 2e * cos(χ)) * (1 + e * cos(χ))^2
-		/
-		√((p - 2)^2 - 4 * e^2)
-	)
+    scale = (
+        (p - 2 - 2e * cos(χ)) * (1 + e * cos(χ))^2
+        /
+        √((p - 2)^2 - 4 * e^2)
+    )
 
-	χ̇ = scale * √(p - 6 - 2e * cos(χ)) / (M * p^2)
-	φ̇ = scale / (M * p^(3//2))
+    χ̇ = scale * √(p - 6 - 2e * cos(χ)) / (M * p^2)
+    φ̇ = scale / (M * p^(3//2))
 
-	return [χ̇, φ̇]
+    return [χ̇, φ̇]
 end
 
 # ╔═╡ e1d3e6fa-3137-42be-8202-6f9d1c00b375
@@ -290,15 +290,15 @@ waveform = compute_waveform(Δt_data, Array(soln), mass_ratio, ode_model_params)
 
 # ╔═╡ 213a5866-3d3e-4c16-9b05-d6e6605d9723
 let
-	fig = Figure()
-	ax = Axis(fig[1,1],  xlabel = "Time", ylabel = "Waveform")
+    fig = Figure()
+    ax = Axis(fig[1,1],  xlabel = "Time", ylabel = "Waveform")
 
-	l = lines!(ax, tsteps, waveform, linewidth = 2, alpha = 0.75)
-	s = scatter!(ax, tsteps, waveform, marker = :circle, markersize = 10, alpha = 0.25)
+    l = lines!(ax, tsteps, waveform, linewidth = 2, alpha = 0.75)
+    s = scatter!(ax, tsteps, waveform, marker = :circle, markersize = 10, alpha = 0.25)
 
-	axislegend(ax, [[l, s]], ["Waveform Data"], position = :lt)
+    axislegend(ax, [[l, s]], ["Waveform Data"], position = :lt)
 
-	fig
+    fig
 end
 
 # ╔═╡ 603cf46b-9b3b-4212-8fdd-91282b417209
@@ -311,10 +311,10 @@ initparams = (init_weight = truncated_normal(std = 1e-4), init_bias = zeros32)
 
 # ╔═╡ 7bd4c04b-8108-417f-814d-ac9d17e41fb5
 const nn = Chain(
-	Base.Fix1(fast_activation, cos),
-	Dense(1 => 32, cos; initparams...),
-	Dense(32 => 32, cos; initparams...),
-	Dense(32 => 2; initparams...)
+    Base.Fix1(fast_activation, cos),
+    Dense(1 => 32, cos; initparams...),
+    Dense(32 => 32, cos; initparams...),
+    Dense(32 => 2; initparams...)
 )
 
 # ╔═╡ cd960168-dedc-4423-b220-3af753281cf0
@@ -328,20 +328,20 @@ const nn_model = StatefulLuxLayer{true}(nn, nothing, st)
 
 # ╔═╡ a59e794e-869d-41f4-b18f-cb75ab320df3
 function ODE_model(u, nn_params, t)
-	χ, φ = u
+    χ, φ = u
 
-	# In this example we know that `st` is an empty NamedTuple so
-	# we can safelty ignore it. However, in general, we should use `st`
-	# to store the state of the neural network.
-	y = 1 .+ nn_model([first(u)], nn_params)
+    # In this example we know that `st` is an empty NamedTuple so
+    # we can safelty ignore it. However, in general, we should use `st`
+    # to store the state of the neural network.
+    y = 1 .+ nn_model([first(u)], nn_params)
 
-	p, M, e = ode_model_params
-	scale = (1 + e * cos(χ)^2) / (M * p^(3//2))
+    p, M, e = ode_model_params
+    scale = (1 + e * cos(χ)^2) / (M * p^(3//2))
 
-	χ̇ = scale * y[1]
-	φ̇ = scale * y[2]
+    χ̇ = scale * y[1]
+    φ̇ = scale * y[2]
 
-	return [χ̇, φ̇]
+    return [χ̇, φ̇]
 end
 
 # ╔═╡ fb080d62-fc65-42ce-8055-2b33de730632
@@ -349,31 +349,31 @@ prob_nn = ODEProblem(ODE_model, u₀, tspan, ps)
 
 # ╔═╡ 623eb0be-c3e7-400e-b98a-184cf122202a
 soln_nn = solve(
-	prob_nn, RK4(), u0 = u₀, p = ps,
-	saveat = tsteps, dt = Δt, adaptive = false)
+    prob_nn, RK4(), u0 = u₀, p = ps,
+    saveat = tsteps, dt = Δt, adaptive = false)
 
 # ╔═╡ be6a07c1-d220-4908-9741-37b90e5df708
 waveform_nn = compute_waveform(
-	Δt_data, Array(soln_nn), mass_ratio, ode_model_params
+    Δt_data, Array(soln_nn), mass_ratio, ode_model_params
 ) |> first
 
 # ╔═╡ 7630650a-14fb-47b3-8362-352d2dd1990d
 let
-	fig = Figure()
-	ax = Axis(fig[1, 1], xlabel = "Time", ylabel = "Waveform")
+    fig = Figure()
+    ax = Axis(fig[1, 1], xlabel = "Time", ylabel = "Waveform")
 
-	lineoptions = (; linewidth = 2, alpha = 0.75)
-	markeroptions = (; marker = :circle, markersize = 12, alpha = 0.5, strokewidth = 2)
+    lineoptions = (; linewidth = 2, alpha = 0.75)
+    markeroptions = (; marker = :circle, markersize = 12, alpha = 0.5, strokewidth = 2)
 
-	l1 = lines!(ax, tsteps, waveform; lineoptions...)
-	s1 = scatter!(ax, tsteps, waveform; markeroptions...)
+    l1 = lines!(ax, tsteps, waveform; lineoptions...)
+    s1 = scatter!(ax, tsteps, waveform; markeroptions...)
 
-	l2 = lines!(ax, tsteps, waveform_nn; lineoptions...)
-	s2 = scatter!(ax, tsteps, waveform_nn; markeroptions...)
+    l2 = lines!(ax, tsteps, waveform_nn; lineoptions...)
+    s2 = scatter!(ax, tsteps, waveform_nn; markeroptions...)
 
-	axislegend(ax, [[l1, s1], [l2, s2]], ["Waveform Data", "Waveform Neural Net (Untrained)"], position = :lb)
+    axislegend(ax, [[l1, s1], [l2, s2]], ["Waveform Data", "Waveform Neural Net (Untrained)"], position = :lb)
 
-	fig
+    fig
 end
 
 # ╔═╡ 0ea60643-17fd-4b15-9881-eb04594ad7fb
@@ -386,13 +386,13 @@ const mseloss = MSELoss();
 
 # ╔═╡ f8387f39-5051-425b-97a9-31de79b6bf3d
 function loss(θ)
-	pred = solve(
-		prob_nn, RK4(), u0 = u₀, p = θ,
-		saveat = tsteps, dt = Δt, adaptive = false)
-	pred_waveform = compute_waveform(
-		Δt_data, Array(pred), mass_ratio, ode_model_params
-	) |> first
-	return mseloss(pred_waveform, waveform)
+    pred = solve(
+        prob_nn, RK4(), u0 = u₀, p = θ,
+        saveat = tsteps, dt = Δt, adaptive = false)
+    pred_waveform = compute_waveform(
+        Δt_data, Array(pred), mass_ratio, ode_model_params
+    ) |> first
+    return mseloss(pred_waveform, waveform)
 end
 
 # ╔═╡ ac9ca6c8-af63-4fe8-9072-2ab3bf9c81e2
@@ -403,13 +403,13 @@ loss(params)
 
 # ╔═╡ 54291b2f-b249-4fa7-8fd4-9d792497ab2a
 begin
-	const losses = Float64[]
+    const losses = Float64[]
 
-	function callback(θ, loss)
-		push!(losses, loss)
-		@printf("Training \t Iteration: %5d \t Loss: %.10f\n", θ.iter, l)
-		return false
-	end
+    function callback(θ, loss)
+        push!(losses, loss)
+        @printf("Training \t Iteration: %5d \t Loss: %.10f\n", θ.iter, l)
+        return false
+    end
 end;
 
 # ╔═╡ c19508f1-b633-4532-b8ad-bff6f618c9ed
@@ -430,8 +430,8 @@ const optprob = Optimization.OptimizationProblem(optf, params)
 
 # ╔═╡ f4bef33e-7b03-4f8f-8744-adb30c4202d2
 res = Optimization.solve(
-	optprob, BFGS(initial_stepnorm = 0.01, linesearch = LineSearches.BackTracking());
-	callback, maxiters = 1000
+    optprob, BFGS(initial_stepnorm = 0.01, linesearch = LineSearches.BackTracking());
+    callback, maxiters = 1000
 )
 
 # ╔═╡ 0a38a17a-fefd-446f-b7ae-0f8bbaaa89e8
@@ -441,13 +441,13 @@ md"""
 
 # ╔═╡ b1d576dc-fb97-4fe2-b4df-9d15deb1e23f
 let
-	fig = Figure()
-	ax = Axis(fig[1,1], xlabel = "Iteration", ylabel = "Loss")
+    fig = Figure()
+    ax = Axis(fig[1,1], xlabel = "Iteration", ylabel = "Loss")
 
-	lines!(ax, losses, linewidth = 4, alpha = 0.75)
-	scatter!(ax, losses, marker = :circle, markersize = 12, strokewidth = 2)
+    lines!(ax, losses, linewidth = 4, alpha = 0.75)
+    scatter!(ax, losses, marker = :circle, markersize = 12, strokewidth = 2)
 
-	fig
+    fig
 end
 
 # ╔═╡ Cell order:

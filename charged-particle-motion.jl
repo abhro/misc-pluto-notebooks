@@ -263,29 +263,28 @@ Point3(0, 1, 2) + Point3(6, 1, 9)
 # trajectories: list of lists, i.e., similar to Vector{Vector{Point}}
 # each item of trajectories is Vector{Point}, which defines a trajectory.
 function track_motion(fig, ax, trajectories, t = eachindex(trajectories[begin]))
-	n = length(trajectories)
-	live_traj = Observable[]
-	lead_points = Observable[]
-	for traj in trajectories
-    	push!(live_traj, Observable(traj[begin:begin+1]))
-    	push!(lead_points, Observable(traj[begin+1]))
+    n = length(trajectories)
+    live_traj = Observable[]
+    lead_points = Observable[]
+    for traj in trajectories
+        push!(live_traj, Observable(traj[begin:begin+1]))
+        push!(lead_points, Observable(traj[begin+1]))
 
-		# draw the start of this new trajectory
-		lines!(ax, live_traj[end])
-    	scatter!(ax, lead_points[end])
-	end
+        # draw the start of this new trajectory
+        lines!(ax, live_traj[end])
+        scatter!(ax, lead_points[end])
+    end
 
-    
     r = Record(fig) do io
         for (i, t_i) in enumerate(t)
-			for k_traj in 1:n
-				x_i = trajectories[k_traj][i]
-				# add new point to trajectory
-				push!(live_traj[k_traj][], x_i)
-				# update leading point
-            	lead_points[k_traj][] = x_i
-            	live_traj[k_traj][] = live_traj[k_traj][]
-			end
+            for k_traj in 1:n
+                x_i = trajectories[k_traj][i]
+                # add new point to trajectory
+                push!(live_traj[k_traj][], x_i)
+                # update leading point
+                lead_points[k_traj][] = x_i
+                live_traj[k_traj][] = live_traj[k_traj][]
+            end
             recordframe!(io)
         end
     end
@@ -310,7 +309,7 @@ let
 
     gc = SVector.(0u"m", 0u"m", v_perp .* tspan)
     ξ = gyromotion.(tspan, Ref((; ω_c, γ₀, v_perp, v_parallel, x₀, v₀)))
-	x = ustrip.(u"m", Point3.(gc + ξ))
+    x = ustrip.(u"m", Point3.(gc + ξ))
     gc = let
         gc_stripped = Vector{Point3f}(undef, length(gc))
         for i in eachindex(gc)
@@ -319,9 +318,9 @@ let
         gc_stripped
     end
 
-	projection = projectxy.(x)
+    projection = projectxy.(x)
 
-	f = Figure()
+    f = Figure()
     ax = Axis3(f[1,1])
 
     b = bounds(vcat(x, gc, projection))
