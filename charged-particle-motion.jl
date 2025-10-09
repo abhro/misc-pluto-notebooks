@@ -20,7 +20,7 @@ end
 using PlutoUI
 
 # ╔═╡ b38d823e-0ab3-4e08-afe9-5c9b46e83ec5
-using WGLMakie
+using GLMakie
 
 # ╔═╡ 41cb3e44-f842-4e58-84df-420c0ce6416a
 using Unitful

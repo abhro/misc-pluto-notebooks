@@ -31,6 +31,9 @@ jobs:
         with:
           cache-registries: "true"
 
+      # Install xvfb for GLMakie
+      - name: Install xvfb
+        run: sudo apt-get update && sudo apt-get install -y xorg-dev libosmesa6 libgl1-mesa-dri mesa-utils xvfb libgl1 freeglut3-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev
 
       # We set up a folder that Pluto can use to cache exported notebooks.
       # If the notebook file did not change, then Pluto can take the exported file from cache instead of running the notebook.
