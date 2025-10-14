@@ -355,7 +355,7 @@ md"""
 \mathbf{x}(t) = \begin{pmatrix}
     \\
     \\
-    z_0 + v_{\parallel,0}t + \dfrac{E_\parallel}{2m} t^2
+    z_0 + v_{∥,0}t + \dfrac{qE_∥}{2m} t^2
 \end{pmatrix}
 ```
 """
@@ -367,9 +367,20 @@ md"""
 \mathbf{v}(t)
 &= \mathbf{u} + \mathbf{v}_E + \left(\frac{qE_∥}{m} t + v_{∥0}\right) \hat{\mathbf{z}} \\
 &= \begin{pmatrix}
-\\
-\\
-
+    v_{0⟂} \sin(ω_c t + γ_0) \\
+    v_{0⟂} \cos(ω_c t + γ_0) \\
+    0
+\end{pmatrix}
++ \begin{pmatrix}
+    \\
+    \\
+    0
+\end{pmatrix}
++
+\begin{pmatrix}
+    0 \\
+    0 \\
+    \frac{qE_∥}{m} t + v_{∥0}
 \end{pmatrix}
 \end{align}
 ```
@@ -392,12 +403,45 @@ md"""
 where ``\mathbf{F}_⟂ = F_x \hat{\mathbf{x}} + F_y \hat{\mathbf{y}}`` and ``\mathbf{F}_∥ = F_z \hat{\mathbf{z}}``.
 """
 
+# ╔═╡ 60329b62-cb14-4471-8177-4b0537a99bfb
+md"""
+Solution:
+"""
+
+# ╔═╡ a07549ec-36f0-4cb1-afe6-362684b2eedb
+md"""
+```math
+\mathbf{x}(t) = \begin{pmatrix}
+    \\
+    \\
+\end{pmatrix}
+```
+"""
+
+# ╔═╡ be32cbaa-a55f-4440-b8a5-c16c2d43cb7d
+md"""
+```math
+\begin{align}
+\mathbf{v}(t)
+&= \mathbf{u} + \mathbf{v}_\text{D} + \mathbf{v}_E + \left(\frac{qE_∥ + F_∥}{m} t + v_{∥0}\right) \hat{\mathbf{z}} \\[1ex]
+&= \begin{pmatrix}
+    v_{0⟂} \sin(ω_c t + γ_0) \\
+    v_{0⟂} \cos(ω_c t + γ_0) \\
+    0
+\end{pmatrix}
++ \begin{pmatrix} \hphantom{-} \frac{F_y}{qB} \\ - \frac{F_x}{qB} \\ 0 \end{pmatrix}
++ \begin{pmatrix} \hphantom{-} \frac{E_y}{B} \\ - \frac{E_x}{B} \\ 0 \end{pmatrix}
++ \begin{pmatrix} 0 \\ 0 \\ \frac{qE_∥ + F_∥}{m} t + v_{∥0} \end{pmatrix}
+\end{align}
+```
+where ``\mathbf{v}_E = \frac{1}{B} \left(E_y \hat{\mathbf{x}} - E_x \hat{\mathbf{y}}\right)``.
+"""
+
 # ╔═╡ d9f14d74-164f-42ab-aac3-4d52a1b8917b
 function guidingcenter(time, params)
     # TODO generalize for non-zero E, Fₑₓₜ
     v_perp = hypot(v₀.x, v₀.y)
-    ω_c = params.ω_c
-    γ₀ = params.γ₀
+    (; ω_c, γ₀) = params
     return x₀ + v_perp/ω_c * SVector(cos(γ₀), -sin(γ₀), 0)
 end
 
@@ -570,6 +614,9 @@ end
 # ╟─a56195b7-3170-4c59-99d1-1ea8bae7bf69
 # ╟─bd6f39b4-a999-44d2-a8b0-646c1e0a26a3
 # ╟─22f446e1-e229-41f2-bb32-85fa8b799e28
+# ╟─60329b62-cb14-4471-8177-4b0537a99bfb
+# ╟─a07549ec-36f0-4cb1-afe6-362684b2eedb
+# ╟─be32cbaa-a55f-4440-b8a5-c16c2d43cb7d
 # ╠═d9f14d74-164f-42ab-aac3-4d52a1b8917b
 # ╟─da308570-8d28-4d9f-8986-73706ab56983
 # ╠═135f1d0d-8403-47c5-9aae-5efa2b995baf
