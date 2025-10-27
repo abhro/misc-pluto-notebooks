@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.19
+# v0.20.20
 
 using Markdown
 using InteractiveUtils
@@ -49,23 +49,24 @@ m \frac{d\mathbf{v}}{dt} = q\mathbf{E} + q\mathbf{v}×\mathbf{B} + \mathbf{F}_\t
 
 # ╔═╡ 91302cb8-87fa-43d4-a41a-db6c409e3378
 md"""
-List of position notations:
+List of position variables:
 - ``\mathbf{x}(t)``: position of particle
-- ``\mathbf{x}_0``: initial position of the particle
-- ``\mathbf{X}_0``: initial position of the gyrocenter??
-- ``\mathbf{R}_C(t)``: gyrocenter
-- ``\boldsymbol{ρ}(t)``: relative displacement of the gyrocenter from initial position? (``\boldsymbol{ρ}(t) = \mathbf{X}_0 - \boldsymbol{R}_C(t)``)
+- ``\mathbf{R}_C(t)``: position of gyrocenter
 - ``\boldsymbol{ξ}(t)``: position of particle relative to gyrocenter, i.e., ``\boldsymbol{ξ} = \mathbf{x} - \mathbf{R}_C``
+- ``\mathbf{x}_0``: initial position of the particle
+- ``\mathbf{X}_0``: initial position of the gyrocenter (``\mathbf{X}_0 = \mathbf{x}_0 - \frac{v_{0⟂}}{ω_c} (\cos(γ_0)\hat{\mathbf{x}} - \sin(γ_0)\hat{\mathbf{y}})``)
+- ``\boldsymbol{ρ}(t)``: relative displacement of the gyrocenter from initial position? (``\boldsymbol{ρ}(t) = \mathbf{X}_0 - \mathbf{R}_C(t)``)
 """
 
 # ╔═╡ 7429f193-2695-4dcb-be2e-5a9f49716621
 md"""
-List of velocity notations:
+List of velocity variables:
 - ``\mathbf{v}``: Velocity of particle
-- ``\mathbf{u}``: Gyromotion (velocity relative to guiding center/gyrocenter)
+- ``\mathbf{u}``: Gyromotion (velocity of particle relative to guiding center/gyrocenter)
 - ``\mathbf{v}_g``: Guiding center velocity
 - ``\mathbf{v}_E``: **E**×**B** drift of guiding center
 - ``\mathbf{v}_\text{D}``: Guiding center drift
+- ``γ_0 = \arctan\left(\dfrac{v_{0,y}}{v_{0,x}}\right)``: Initial phase of the velocity vector in the xy-plane.
 """
 
 # ╔═╡ e9c4f014-11c1-4c6d-b0e0-24ade00f394c
@@ -134,7 +135,7 @@ md"""
 ```math
 \begin{align}
 \mathbf{x}(t) &= \mathbf{x}_0 + \boldsymbol{ρ} + \boldsymbol{ξ}(t)
-= \mathbf{R}_C + \boldsymbol{ξ}(t) \\[1.5ex]
+= \mathbf{R}_C(t) + \boldsymbol{ξ}(t) \\[1.5ex]
 &= \begin{pmatrix}
     x_0 \\
     y_0 \\
@@ -181,9 +182,8 @@ md"""
 # ╔═╡ 866c51f0-ee41-4147-866b-ad1cc386fe1f
 md"""
 where
-- ``ω_c = \dfrac{qB}{m}``
+- ``ω_c = {qB}/{m}`` is the gyrofrequency
 - ``v_{0⟂} = \sqrt{v_{0,x}^2 + v_{0,y}^2}``
-- ``γ_0 = \arctan\left(\dfrac{v_{0,y}}{v_{0,x}}\right)``
 """
 
 # ╔═╡ a8810170-7c78-4e63-b8aa-bc7c3d6b3f04
@@ -291,9 +291,9 @@ Solution:
 md"""
 ```math
 \mathbf{x}(t) = \begin{pmatrix}
-    x_0 + \frac{v_{0⟂}}{ω_c} \cos(γ_0) - \frac{v_{0⟂}}{ω_c} \cos(ω_c t + γ_0) \\
-    y_0 - \frac{v_{0⟂}}{ω_c} \sin(γ_0) + \frac{v_{0⟂}}{ω_c} \sin(ω_c t + γ_0) \\
-    z_0 + v_{\parallel,0}t + \dfrac{F_\parallel}{2m} t^2
+    x_0 + \frac{v_{0⟂}}{ω_c} \cos(γ_0) - \frac{v_{0⟂}}{ω_c} \cos(ω_c t + γ_0) + \frac{F_y}{qB} t \\
+    y_0 - \frac{v_{0⟂}}{ω_c} \sin(γ_0) + \frac{v_{0⟂}}{ω_c} \sin(ω_c t + γ_0) - \frac{F_x}{qB} t \\
+    z_0 + v_{\parallel,0}t + \frac{F_\parallel}{2m} t^2
 \end{pmatrix}
 ```
 """
@@ -328,6 +328,26 @@ md"""
 where ``\mathbf{v}_\text{D} = \frac{1}{qB} (F_y \hat{\mathbf{x}} - F_x \hat{\mathbf{y}})``.
 """
 
+# ╔═╡ f9c390fd-f0b9-471f-a4fc-10f8125f9388
+md"""
+Choose force vector:
+"""
+
+# ╔═╡ db7a3387-57e5-43bf-b077-83ca08c585a5
+F = SVector(0.5, 0.3, 3.3)u"N"
+
+# ╔═╡ 538efe14-e0c1-427a-8440-1870777c0618
+r1 = v_perp/ω_c * SVector(cos(γ₀), -sin(γ₀), 0);
+
+# ╔═╡ 427c7557-f201-4279-8c67-d080f180b6d3
+r2 = Ref(SVector(F.y, -F.x, 0u"N")/(q*B)) .* tspan;
+
+# ╔═╡ 2ec96af8-4e67-4756-8236-71b10c6f146e
+r3 = Ref(SVector(0u"m/s", 0u"m/s", v_parallel)) .* tspan;
+
+# ╔═╡ 82ba8cd1-c7d3-4b29-8ec8-cfd5999d3b84
+r4 = Ref(SVector(0u"m/s^2", 0u"m/s^2", F.z/2m)) .* tspan.^2;
+
 # ╔═╡ 8f9070d9-9412-4ccd-b84a-d8a20b6f7059
 md"""
 ## Constant and uniform **E** and **B** fields
@@ -337,11 +357,12 @@ md"""
 md"""
 ```math
 \begin{align}
-\mathbf{E} &= \mathbf{E}_∥ + E_⟂ \hat{\mathbf{z}}, &
+\mathbf{E} &= \mathbf{E}_⟂ + E_∥ \hat{\mathbf{z}}, &
 \mathbf{B} &= B \hat{\mathbf{z}}, &
 \mathbf{F}_\text{ext} &= 0.
 \end{align}
 ```
+where ``\mathbf{E}_⟂ = E_x \hat{\mathbf{x}} + E_y \hat{\mathbf{y}}`` and ``\mathbf{E}_∥ = E_z \hat{\mathbf{z}}``.
 """
 
 # ╔═╡ cb013904-1a68-4655-848b-4d520e66fc48
@@ -353,9 +374,9 @@ Solution:
 md"""
 ```math
 \mathbf{x}(t) = \begin{pmatrix}
-    \\
-    \\
-    z_0 + v_{∥,0}t + \dfrac{qE_∥}{2m} t^2
+    x_0 + \frac{v_{0⟂}}{ω_c} \cos(γ_0) - \frac{v_{0⟂}}{ω_c} \cos(ω_c t + γ_0) + \frac{E_y}{B}t \\
+    y_0 - \frac{v_{0⟂}}{ω_c} \sin(γ_0) + \frac{v_{0⟂}}{ω_c} \sin(ω_c t + γ_0) - \frac{E_x}{B} t \\
+    z_0 + v_{∥,0}t + \frac{qE_∥}{2m} t^2
 \end{pmatrix}
 ```
 """
@@ -371,19 +392,11 @@ md"""
     v_{0⟂} \cos(ω_c t + γ_0) \\
     0
 \end{pmatrix}
-+ \begin{pmatrix}
-    \\
-    \\
-    0
-\end{pmatrix}
-+
-\begin{pmatrix}
-    0 \\
-    0 \\
-    \frac{qE_∥}{m} t + v_{∥0}
-\end{pmatrix}
++ \begin{pmatrix} \hphantom{-} \frac{E_y}{B} \\ - \frac{E_x}{B} \\ 0 \end{pmatrix}
++ \begin{pmatrix} 0 \\ 0 \\ \frac{qE_∥}{m} t + v_{∥0} \end{pmatrix}
 \end{align}
 ```
+where ``\mathbf{v}_E = \frac{1}{B} \left(E_y \hat{\mathbf{x}} - E_x \hat{\mathbf{y}}\right)``.
 """
 
 # ╔═╡ bd6f39b4-a999-44d2-a8b0-646c1e0a26a3
@@ -434,7 +447,6 @@ md"""
 + \begin{pmatrix} 0 \\ 0 \\ \frac{qE_∥ + F_∥}{m} t + v_{∥0} \end{pmatrix}
 \end{align}
 ```
-where ``\mathbf{v}_E = \frac{1}{B} \left(E_y \hat{\mathbf{x}} - E_x \hat{\mathbf{y}}\right)``.
 """
 
 # ╔═╡ d9f14d74-164f-42ab-aac3-4d52a1b8917b
@@ -523,8 +535,42 @@ projectxy(p::Point3{T}) where T = Point3(p[1], p[2], zero(T));
 
 # ╔═╡ c4914c73-bbf5-4dab-861a-db045f0fc5dd
 let
-
     gc = SVector.(0u"m", 0u"m", v_perp .* tspan)
+    ξ = gyromotion.(tspan, Ref((; ω_c, γ₀, v_perp, v_parallel, x₀, v₀)))
+    x = ustrip.(u"m", Point3.(gc + ξ))
+    gc = let
+        gc_stripped = Vector{Point3f}(undef, length(gc))
+        for i in eachindex(gc)
+            gc_stripped[i] = ustrip(u"m", Point3(gc[i]))
+        end
+        gc_stripped
+    end
+
+    projection = projectxy.(x)
+
+    fig = Figure()
+    ax = Axis3(fig[1,1])
+
+    # leg = Legend(fig[1,2], ax, ["Particle", "Projection", "Gyrocenter"])
+
+    b = bounds(vcat(x, gc, projection))
+    limits!(ax, b...)
+
+    trajectories = (x,)
+    if do_proj
+        trajectories = (trajectories..., projection)
+    end
+    if do_guiding_center
+        trajectories = (trajectories..., gc)
+    end
+
+    r = track_motion(fig, ax, trajectories)
+end
+
+# ╔═╡ 2d038925-3025-415d-9198-750101aeb703
+let
+    gc = (Ref(r1) .+ r2 .+ r3 .+ r4)
+    # gc = SVector.(0u"m", 0u"m", v_perp .* tspan)
     ξ = gyromotion.(tspan, Ref((; ω_c, γ₀, v_perp, v_parallel, x₀, v₀)))
     x = ustrip.(u"m", Point3.(gc + ξ))
     gc = let
@@ -607,6 +653,13 @@ end
 # ╟─cd2517b7-8507-45f3-8d52-ce8e33818bae
 # ╟─bde4ef61-4c56-440f-9082-8decd9b0137a
 # ╟─1b93bdea-c76f-4bc2-9b89-08217ca8249d
+# ╟─f9c390fd-f0b9-471f-a4fc-10f8125f9388
+# ╠═db7a3387-57e5-43bf-b077-83ca08c585a5
+# ╠═538efe14-e0c1-427a-8440-1870777c0618
+# ╠═427c7557-f201-4279-8c67-d080f180b6d3
+# ╠═2ec96af8-4e67-4756-8236-71b10c6f146e
+# ╠═82ba8cd1-c7d3-4b29-8ec8-cfd5999d3b84
+# ╠═2d038925-3025-415d-9198-750101aeb703
 # ╟─8f9070d9-9412-4ccd-b84a-d8a20b6f7059
 # ╟─629f429f-8b33-4f25-af62-823c89da67a5
 # ╟─cb013904-1a68-4655-848b-4d520e66fc48
