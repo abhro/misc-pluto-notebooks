@@ -207,7 +207,7 @@ Magnetic field strength:
 """
 
 # ╔═╡ 36146cf5-c26a-4759-839a-13c2adc29d96
-B = 3.0u"nT";
+B = 30.0u"nT";
 
 # ╔═╡ 73d642db-b214-45c3-a16f-558c18a30011
 ω_c = q * B / m |> u"rad/s"
@@ -334,7 +334,7 @@ Choose force vector:
 """
 
 # ╔═╡ db7a3387-57e5-43bf-b077-83ca08c585a5
-F = SVector(0.5, 0.3, 3.3)u"N"
+F = SVector(0.5e-23, 0.3e-24, 3.3e-26)u"μN"
 
 # ╔═╡ 538efe14-e0c1-427a-8440-1870777c0618
 r1 = v_perp/ω_c * SVector(cos(γ₀), -sin(γ₀), 0);
