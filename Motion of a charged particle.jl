@@ -107,7 +107,7 @@ Time span:
 """
 
 # ╔═╡ 178b6fa9-4066-4acb-8cbc-73bae83930a3
-tspan = range(0.0u"s", 300.0u"s", length = 2000);
+tspan = range(0.0u"s", 300.0u"s", length = 6000);
 
 # ╔═╡ ee41070b-b68b-4f5f-98b6-c9843f9587eb
 md"""
