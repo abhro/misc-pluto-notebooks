@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.19
+# v0.20.21
 
 using Markdown
 using InteractiveUtils
@@ -44,7 +44,7 @@ For a non-rotating star in hydrostatic equilibrium (i.e., no time dependent beha
 ```math
 \begin{align*}
 \frac{dr}{dM_r} &= \frac{1}{4πr^2 ρ}, &
-\frac{dT}{dM_r} &= -\frac{3 κ L_r}{64π^2 ac T^3 r^4}, \\[1ex]
+\frac{dT}{dM_r} &= -\frac{3}{64π^2 ac}\frac{κ L_r}{T^3 r^4}, \\[1ex]
 \frac{dP}{dM_r} &= -\frac{GM_r}{4πr^4}, &
 \frac{dL_r}{dM_r} &= ε.
 \end{align*}
@@ -55,22 +55,27 @@ For a non-rotating star in hydrostatic equilibrium (i.e., no time dependent beha
 md"""
 The key variables are the radial coordinate ``r``; ``M_r``, the mass interior to ``r``; ``P``, the local pressure; ``T``, the local temperature; and ``L_r``, the total energy production interior to ``r``. Note that ``P`` and ``T`` are local, while ``M_r`` and ``L_r`` are cumulative. In addition to the key variables just listed, there are numerous auxiliary variables and coefficients used in the equations:
 
+- The radiation constant, ``a = \dfrac{4σ_\text{SB}}{c} = \mathrm{7.565×{10}^{-16} \, J\,m^{-3}\,K^{-4}}``, where ``σ_\text{SB}`` is the Stefan--Boltzmann constant
+
 - The local density, _ρ_:
 
   ```math
-  ρ = \mathrm{9.91\!×\!{10}^{-28} \, kg} \;\; \frac{P - aT^4/3}{k_\text{B}T},
+  ρ(P,T) = \mathrm{9.91\!×\!{10}^{-28} \, kg} \;\; \frac{P - aT^4/3}{k_\text{B}T},
   ```
 
 - The mass absorption coefficient, _κ_:
 
   ```math
-  κ = \mathrm{0.035 \, \frac{m^2}{kg}}
+  κ(ρ, T) = \mathrm{0.035 \, \frac{m^2}{kg}}
     + \mathrm{6.44\!×\!{10}^{18} \, \frac{m^2}{kg}} \left(\frac{ρ}{1\,\mathrm{kg/m^3}}\right) \left(\frac{T}{1\,\mathrm{K}}\right)^{-3.5},
   ```
 
-- The radiation constant, ``a = \mathrm{7.565×{10}^{-16} \, J\,m^{-3}\,K^{-4}}``,
+- The specific luminosity,
+  ```math
+   ε(ρ, T) = \mathrm{0.136 \, W\,kg^{-1}} \left(\tilde{ε}_0 + 3.49\!×\!{10}^{12} \tilde{ε}_1 \right),
+  ```
 
-- The specific luminosity, ``ε = \mathrm{0.136 \, W\,kg^{-1}} \left(\tilde{ε}_0 + 3.49\!×\!{10}^{12} \tilde{ε}_1 \right)``, where, in turn,
+  where, in turn,
 
   ```math
   \begin{align*}
@@ -96,6 +101,19 @@ end
 # ╔═╡ d61d868e-7edd-46fc-9994-9c1af60b4cc9
 md"""
 The above formulae all use SI units, _T_₆ ≡ _T_ / (10⁶ K), and the constants ``c`` and ``k_\text{B}`` have their usual values. These have been calculated assuming a primordial star that is 75% hydrogen and 25% helium by mass, and which is fully ionized throughout. This problem is another boundary value problem. Take a primordial Population-III (i.e. pure H/He) star whose mass is ``100 M_⊙``. At its surface you have ``M_r = M_* = 100 M_⊙``, and ``P = 0``. At its core you have ``L_r = r = 0``.
+"""
+
+# ╔═╡ a4b9c073-39de-4097-8b30-b0b14617e843
+md"""
+Boundary conditions:
+
+| Quantity | Inner boundary, ``M_r = 0`` | Outer boundary, ``M_r = M_⋆`` |
+|:---------|:----------------------------|:------------------------------|
+| ``r``    | ``0``                       |                               |
+| ``P``    | ``P_c = ?``                 | ``0``                         |
+| ``L_r``  | ``0``                       |                               |
+| ``T``    | ``T_c = ?``                 |                               |
+``P_c`` and ``T_c`` are unknown.
 """
 
 # ╔═╡ 04d0caf4-f307-47e5-9c2d-7b97da6e8f80
@@ -232,6 +250,7 @@ end
 # ╠═a6728349-7323-4e11-a77b-3b05e61992a2
 # ╟─d61d868e-7edd-46fc-9994-9c1af60b4cc9
 # ╠═e74e279d-8f51-4c3b-88a6-efffe6a9707e
+# ╟─a4b9c073-39de-4097-8b30-b0b14617e843
 # ╟─04d0caf4-f307-47e5-9c2d-7b97da6e8f80
 # ╟─5885df68-9573-4651-9a05-5d0a5b18d747
 # ╠═e4fb8237-d81a-44c2-85f8-b44a0a11bd3c
