@@ -13,6 +13,9 @@ using PlutoUI: TableOfContents
 # ╔═╡ 1e6a2dc7-ff39-4463-a6d3-7a87ecc6ae53
 using BoundaryValueDiffEq
 
+# ╔═╡ 44d9b444-3ed6-4df0-866b-7d683be2d278
+using ForwardDiff
+
 # ╔═╡ 81b35b32-2be1-4458-bf91-97780765a6fd
 using RecursiveArrayTools
 
@@ -86,17 +89,24 @@ The key variables are the radial coordinate ``r``; ``M_r``, the mass interior to
 """
 
 # ╔═╡ fd286a3b-b45c-4891-a1b3-7cf0ca6209fe
-"""Mass absorption coefficient"""
-massabsorpcoeff(ρ, T) = (0.035 + 6.44e18 * ustrip(kg/m^3, ρ)/ustrip(K, T)^3.5) * m^2/kg;
+"""
+    massabsorpcoeff(ρ, T)
+Mass absorption coefficient
+"""
+function massabsorpcoeff(ρ, T)
+    scale_factor = ustrip(kg/m^3, ρ)/ustrip(K, T)^3.5
+    return (0.035 + 6.44e18 * scale_factor) * m^2/kg
+end;
 
 # ╔═╡ a6728349-7323-4e11-a77b-3b05e61992a2
+"""``ε(ρ, T)``"""
 function specificpower(ρ, T)
     ρ = ustrip(kg/m^3, ρ)
     T₆ = T/1e6K |> NoUnits
     ε̃₀ = ρ / T₆^(2//3) * exp(-33.80/∛T₆)
     ε̃₁ = ρ^2 / T₆^3 * exp(-4403/T₆)
     return 0.136W/kg * (ε̃₀ + 3.49e12 * ε̃₁)
-end
+end;
 
 # ╔═╡ d61d868e-7edd-46fc-9994-9c1af60b4cc9
 md"""
@@ -105,16 +115,34 @@ The above formulae all use SI units, _T_₆ ≡ _T_ / (10⁶ K), and the co
 
 # ╔═╡ a4b9c073-39de-4097-8b30-b0b14617e843
 md"""
-Boundary conditions:
+Boundary conditions/values (known and unknown):
 
 | Quantity | Inner boundary, ``M_r = 0`` | Outer boundary, ``M_r = M_⋆`` |
 |:---------|:----------------------------|:------------------------------|
-| ``r``    | ``0``                       |                               |
+| ``r``    | ``0``                       | ``R_⋆``                       |
 | ``P``    | ``P_c = ?``                 | ``0``                         |
-| ``L_r``  | ``0``                       |                               |
+| ``L_r``  | ``0``                       | ``L_⋆``                       |
 | ``T``    | ``T_c = ?``                 |                               |
-``P_c`` and ``T_c`` are unknown.
+``P_c``, ``T_c``, ``R_⋆``, and ``L_⋆`` are unknown.
 """
+
+# ╔═╡ 0b78405a-ad60-44b8-a2b4-3fc57d866540
+function bca(u_a, p)
+    r, T, P, Lᵣ = u_a
+    # r, T, P, Lᵣ = r*m, T*K, P*Pa, Lᵣ*W
+
+    return [r, Lᵣ]
+    #return [ustrip(m, r), ustrip(W, Lᵣ)]
+end
+
+# ╔═╡ 54cf2228-0041-476c-b56d-055b39afc596
+function bcb(u_b, p)
+    r, T, P, Lᵣ = u_b
+    # r, T, P, Lᵣ = r*m, T*K, P*Pa, Lᵣ*W
+
+    return [P]
+    #return [ustrip(Pa, P)]
+end
 
 # ╔═╡ 04d0caf4-f307-47e5-9c2d-7b97da6e8f80
 md"""
@@ -127,10 +155,11 @@ Use the shooting method to estimate the core temperature and pressure of this st
 """
 
 # ╔═╡ 92fd50e9-dfdf-447c-ac60-fb46d0080dbc
-u₀_guess = ArrayPartition([0.1m], [16e6K], [1.2e16Pa], [0.1W])
+# u₀_guess = ArrayPartition([0.1m], [16e6K], [1.2e16Pa], [0.1W])
+u₀_guess = [1e-9, 16e6, 1.2e16, 1e-10]
 
 # ╔═╡ 13b416d0-39ef-40bb-8997-8e1b7226e10a
-solver = Shooting(DP5())
+solver = Shooting(DP5(), jac_alg = AutoForwardDiff())
 
 # ╔═╡ 9d3e56a2-1eb3-46ad-baf9-fd4bb1f3e8de
 # odefun()
@@ -192,6 +221,8 @@ density(P, T) = M₀ * (P - a*T^4/3) / (k_B*T)
 # ╔═╡ 366f153f-e666-45f1-b594-28d0b8381830
 function odefun(u, p, Mᵣ)
     r, T, P, Lᵣ = u
+    r, T, P, Lᵣ = r*m, T*K, P*Pa, Lᵣ*W
+    Mᵣ = Mᵣ * kg
 
     ρ = density(P, T)
     κ = massabsorpcoeff(ρ, T)
@@ -201,44 +232,76 @@ function odefun(u, p, Mᵣ)
     P′ = - G*Mᵣ / (4π*r^4) |> Pa/kg
     Lᵣ′ = specificpower(ρ, T) |> W/kg
 
-    u′ = ArrayPartition([r′], [T′], [P′], [Lᵣ′])
+    # u′ = ArrayPartition([r′], [T′], [P′], [Lᵣ′])
+    u′ = [ustrip(m/kg, r′), ustrip(K/kg, T′), ustrip(Pa/kg, P′), ustrip(W/kg, Lᵣ′)]
 
     return u′
 end
+
+# ╔═╡ 6ac5b3da-c540-48ea-95b3-b51719ec36b1
+# bvpfunction = BVPFunction(odefun, stellarboundary)
+bvpfunction = TwoPointBVPFunction(odefun, (bca, bcb))
 
 # ╔═╡ 2267ba11-3424-48a5-b219-07ee3b2bc4d9
 const M_star = 100Msun
 
 # ╔═╡ e74e279d-8f51-4c3b-88a6-efffe6a9707e
-Mᵣ_domain = (0kg, M_star |> kg)
-
-# ╔═╡ e4fb8237-d81a-44c2-85f8-b44a0a11bd3c
-function stellarboundary(u, _, Mᵣ)
-    u₀ = u[0]
-    return ArrayPartition(
-        [u₀[1]],             # at the center, r = 0
-        [u(M_star)[3]],      # at the surface, P = 0
-        [u₀[4]],             # at the center, Lᵣ = 0
-    )
-end
-
-# ╔═╡ 6ac5b3da-c540-48ea-95b3-b51719ec36b1
-bvpfunction = BVPFunction(odefun, stellarboundary)
+# Mᵣ_domain = (0kg, M_star |> kg)
+Mᵣ_domain = (0, ustrip(kg, M_star))
 
 # ╔═╡ d8af8e17-d953-41ec-ad1e-ed7c246e23ea
 bvproblem = BVProblem(bvpfunction, u₀_guess, Mᵣ_domain)
+# bvproblem = TwoPointBVProblem(odefun, (bca, bcb), u₀_guess, Mᵣ_domain)
 
 # ╔═╡ 79c2f0f9-5cb4-4a19-ac97-14d174825c50
 solution = solve(bvproblem, solver)
+
+# ╔═╡ e4fb8237-d81a-44c2-85f8-b44a0a11bd3c
+function stellarboundary(u, _, Mᵣ)
+    u₀ = u(0)
+    return [u₀[1], u(ustrip(kg, M_star))[3], u₀[4]]
+    return ArrayPartition(
+        [u₀[1]],             # at the center, r = 0
+        [u(ustrip(kg, M_star))[3]],      # at the surface, P = 0
+        [u₀[4]],             # at the center, Lᵣ = 0
+    )
+end
 
 # ╔═╡ 6e5aa9ff-6879-4d04-9ce5-f47afa13e6e0
 function stellarboundary!(residual, u, p, Mᵣ)
     u₀ = u(0)
     residual[1] = u₀[1]         # at the center, r = 0
-    residual[2] = u(M_star)[3]  # at the surface, P = 0
+    residual[2] = u(ustrip(kg, M_star))[3]  # at the surface, P = 0
     residual[3] = u₀[4]         # at the center, Lᵣ = 0
     return residual
 end
+
+# ╔═╡ 00000000-0000-0000-0000-000000000001
+PLUTO_PROJECT_TOML_CONTENTS = """
+[deps]
+BoundaryValueDiffEq = "764a87c0-6b3e-53db-9096-fe964310641d"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+PhysicalConstants = "5ad8b20f-a522-5ce9-bfc9-ddf1d5bda6ab"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
+SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
+Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
+UnitfulAstro = "6112ee07-acf9-5e0f-b108-d242c714bf9f"
+
+[compat]
+BoundaryValueDiffEq = "~5.18.0"
+CairoMakie = "~0.15.6"
+ForwardDiff = "~1.3.0"
+OrdinaryDiffEq = "~6.103.0"
+PhysicalConstants = "~0.2.4"
+PlutoUI = "~0.7.73"
+RecursiveArrayTools = "~3.39.0"
+SciMLBase = "~2.124.0"
+Unitful = "~1.25.1"
+UnitfulAstro = "~1.2.2"
+"""
 
 # ╔═╡ Cell order:
 # ╟─da3e18e3-0cda-440b-932e-7c09988e28dc
@@ -251,6 +314,8 @@ end
 # ╟─d61d868e-7edd-46fc-9994-9c1af60b4cc9
 # ╠═e74e279d-8f51-4c3b-88a6-efffe6a9707e
 # ╟─a4b9c073-39de-4097-8b30-b0b14617e843
+# ╠═0b78405a-ad60-44b8-a2b4-3fc57d866540
+# ╠═54cf2228-0041-476c-b56d-055b39afc596
 # ╟─04d0caf4-f307-47e5-9c2d-7b97da6e8f80
 # ╟─5885df68-9573-4651-9a05-5d0a5b18d747
 # ╠═e4fb8237-d81a-44c2-85f8-b44a0a11bd3c
@@ -270,6 +335,7 @@ end
 # ╠═93698b5a-1f3b-4c47-9e67-aff44f234c0f
 # ╠═7066ef95-8257-4950-a0a7-c15832e1725e
 # ╠═1e6a2dc7-ff39-4463-a6d3-7a87ecc6ae53
+# ╠═44d9b444-3ed6-4df0-866b-7d683be2d278
 # ╠═81b35b32-2be1-4458-bf91-97780765a6fd
 # ╠═5550c36f-dcef-4d95-9c90-46e91d276d37
 # ╠═54f413fa-3a90-4e76-a192-75afa6a5bd6d
@@ -283,3 +349,4 @@ end
 # ╟─c68905f0-23ce-498d-a478-e6e41c19308b
 # ╠═817a6fc5-b327-48ea-9cda-4a4217931cc9
 # ╠═2267ba11-3424-48a5-b219-07ee3b2bc4d9
+# ╟─00000000-0000-0000-0000-000000000001
