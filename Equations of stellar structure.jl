@@ -94,33 +94,10 @@ The key variables are the radial coordinate ``r``; ``M_r``, the mass interior to
   ```
 """
 
-# ╔═╡ fd286a3b-b45c-4891-a1b3-7cf0ca6209fe
-"""
-    massabsorpcoeff(ρ, T)
-Mass absorption coefficient
-"""
-function massabsorpcoeff(ρ, T)
-    scale_factor = ustrip(kg/m^3, ρ)/ustrip(K, T)^3.5
-    return (0.035 + 6.44e18 * scale_factor) * m^2/kg
-end;
-
-# ╔═╡ a6728349-7323-4e11-a77b-3b05e61992a2
-"""``ε(ρ, T)``"""
-function specificpower(ρ, T)
-    ρ = ustrip(kg/m^3, ρ)
-    T₆ = T/1e6K |> NoUnits
-    ε̃₀ = ρ / T₆^(2//3) * exp(-33.80/∛T₆)
-    ε̃₁ = ρ^2 / T₆^3 * exp(-4403/T₆)
-    return 0.136W/kg * (ε̃₀ + 3.49e12 * ε̃₁)
-end;
-
 # ╔═╡ d61d868e-7edd-46fc-9994-9c1af60b4cc9
 md"""
 The above formulae all use SI units, _T_₆ ≡ _T_ / (10⁶ K), and the constants ``c`` and ``k_\text{B}`` have their usual values. These have been calculated assuming a primordial star that is 75% hydrogen and 25% helium by mass, and which is fully ionized throughout. This problem is another boundary value problem. Take a primordial Population-III (i.e. pure H/He) star whose mass is ``100 M_⊙``. At its surface you have ``M_r = M_* = 100 M_⊙``, and ``P = 0``. At its core you have ``L_r = r = 0``.
 """
-
-# ╔═╡ fa735bf2-5124-4c09-96ad-c3ea0c38decf
-
 
 # ╔═╡ a4b9c073-39de-4097-8b30-b0b14617e843
 md"""
@@ -128,9 +105,9 @@ Boundary conditions/values (known and unknown):
 
 | Quantity | Inner boundary, ``M_r = 0`` | Outer boundary, ``M_r = M_⋆`` |
 |:---------|:----------------------------|:------------------------------|
-| ``r``    | ``0``                       | ``R_⋆``                       |
+| ``r``    | ``0``                       | ``R_⋆ = ?``                   |
 | ``P``    | ``P_c = ?``                 | ``0``                         |
-| ``L_r``  | ``0``                       | ``L_⋆``                       |
+| ``L_r``  | ``0``                       | ``L_⋆ = ?``                   |
 | ``T``    | ``T_c = ?``                 |                               |
 ``P_c``, ``T_c``, ``R_⋆``, and ``L_⋆`` are unknown.
 """
@@ -176,14 +153,6 @@ T_c_guesses = logrange(3e5, 1e10, length = 5000)
 # ╔═╡ 892f5a7b-83ec-4eb9-a11f-6a86b04ee4e4
 P_c_guesses = logrange(1e12, 1e20, length = 5000)
 
-# ╔═╡ e307c747-e1fd-449f-a269-d3984c5bcf39
-# foreach T_c_guess and P_c_guess
-#    create ODE IVP
-#    try solving it
-#    if it errors, its not solvable
-#    if it's solved, save it to the solution matrix, the index corresponding to this T_c_guess and p_c_guess
-# end
-
 # ╔═╡ 0d32114c-f8a7-4a09-8a8a-23e18f89b259
 md"""
 ## Part b
@@ -203,6 +172,39 @@ md"""
 md"""
 Plot ``r(M)``, ``T(M)``, and ``L(M)`` from ``0`` to ``M_r`` (It will probably be easier to read if you use three different plots rather than one panel for all three curves.) Use logarithmic y axes and a linear x axis.
 """
+
+# ╔═╡ 6a99bdb9-7f3b-4292-8d9b-1c3c01f05e6e
+axisproperties = (yscale = log10, xlabel = "Mᵣ (kg)", xminorgridvisible = true, yminorgridvisible = true, xminorticksvisible = true, yminorticksvisible = true)
+
+# ╔═╡ a105e4e9-f732-4080-b2ea-bfce5c739a08
+md"""
+## Auxiliary functions
+"""
+
+# ╔═╡ fd286a3b-b45c-4891-a1b3-7cf0ca6209fe
+"""
+    massabsorpcoeff(ρ, T)
+
+Mass absorption coefficient
+"""
+function massabsorpcoeff(ρ, T)
+    scale_factor = ustrip(kg/m^3, ρ)/ustrip(K, T)^3.5
+    return (0.035 + 6.44e18 * scale_factor) * m^2/kg
+end
+
+# ╔═╡ a6728349-7323-4e11-a77b-3b05e61992a2
+"""
+    specificpower(ρ, T)
+
+Specific power ``ε(ρ, T)`` as a function of local density and temperature.
+"""
+function specificpower(ρ, T)
+    ρ = ustrip(kg/m^3, ρ)
+    T₆ = T/1e6K |> NoUnits
+    ε̃₀ = ρ / T₆^(2//3) * exp(-33.80/∛T₆)
+    ε̃₁ = ρ^2 / T₆^3 * exp(-4403/T₆)
+    return 0.136W/kg * (ε̃₀ + 3.49e12 * ε̃₁)
+end
 
 # ╔═╡ 45caddb4-8dad-451a-a6dc-fcda9e087dfe
 md"""
@@ -241,7 +243,7 @@ density(P, T) = M₀ * (P - a*T^4/3) / (k_B*T)
 # ╔═╡ 366f153f-e666-45f1-b594-28d0b8381830
 function odefun(u, p, Mᵣ)
     r, T, P, Lᵣ = u
-    @debug("Working with", r, T, P, Lᵣ)
+    # @debug("Working with", r, T, P, Lᵣ)
     r, T, P, Lᵣ = r*m, T*K, P*Pa, Lᵣ*W
     Mᵣ = Mᵣ * kg
 
@@ -278,7 +280,50 @@ bvproblem = BVProblem(bvpfunction, u₀_guess, Mᵣ_domain)
 M_saves = range(Mᵣ_domain..., length=10)
 
 # ╔═╡ 79c2f0f9-5cb4-4a19-ac97-14d174825c50
+# ╠═╡ disabled = true
+#=╠═╡
 solution = solve(bvproblem, solver, isoutofdomain = (u, p, Mᵣ) -> any(<(0), u), abstol = 0.1, tstops=M_saves, adaptive = false)
+  ╠═╡ =#
+
+# ╔═╡ e307c747-e1fd-449f-a269-d3984c5bcf39
+begin
+	solutions = Matrix{Any}(undef, length(T_c_guesses), length(P_c_guesses))
+	for (T_idx, T_c) in enumerate(T_c_guesses), (P_idx, P_c) in enumerate(P_c_guesses)
+		# create ODE IVP
+		u₀_guess = [1e-9, T_c, P_c, 1e-10]
+		ivp = ODEProblem(odefun, u₀_guess, Mᵣ_domain)
+		# try solving it
+		try
+			sol = solve(ivp, RK4())
+			solutions[T_idx, P_idx] = sol
+			# if it errors, its not solvable
+		catch
+			# if it's solved, save it to the solution matrix, the index corresponding to this T_c_guess and p_c_guess
+			solutions[T_idx, P_idx] = nothing
+		end
+	end
+end
+
+# ╔═╡ 30039996-5922-4fb9-9ee1-22f98f2685ba
+solutions
+
+# ╔═╡ 3d0a13c4-a1df-401f-84df-37d1499af842
+ivp = ODEProblem(odefun, u₀_guess, Mᵣ_domain)
+
+# ╔═╡ 9d0e470d-51f5-4ec2-a49d-99827a08fab0
+sol = solve(ivp, RK4())
+
+# ╔═╡ 919784e5-74b8-406b-b449-e0c3004cecfe
+lines(sol.t, sol[1,:], axis = (; axisproperties..., ylabel = "r (m)"))
+
+# ╔═╡ 088afba7-5757-49fe-88c9-850396d882dc
+lines(sol.t, sol[2,:], axis = (; axisproperties..., ylabel = "T (K)"))
+
+# ╔═╡ 2d17f6d3-eb87-4454-95b3-ca1a5dc4f52f
+lines(sol.t, sol[3,:], axis = (; axisproperties..., ylabel = "P (Pa)"))
+
+# ╔═╡ 7106980e-6555-402c-ba2b-66330e01f342
+lines(sol.t, sol[4,:], axis = (; axisproperties..., ylabel = "Lᵣ (W)"))
 
 # ╔═╡ e4fb8237-d81a-44c2-85f8-b44a0a11bd3c
 function stellarboundary(u, _, Mᵣ)
@@ -3137,12 +3182,8 @@ version = "4.1.0+0"
 # ╟─03118617-5cca-4400-9e87-1562d42d7d44
 # ╠═366f153f-e666-45f1-b594-28d0b8381830
 # ╟─9ed8de43-cd5a-4e40-a8bb-b33038d80a8d
-# ╠═9e69b9d6-08e1-4a83-a5ea-102620bdd674
-# ╠═fd286a3b-b45c-4891-a1b3-7cf0ca6209fe
-# ╠═a6728349-7323-4e11-a77b-3b05e61992a2
 # ╟─d61d868e-7edd-46fc-9994-9c1af60b4cc9
 # ╠═e74e279d-8f51-4c3b-88a6-efffe6a9707e
-# ╠═fa735bf2-5124-4c09-96ad-c3ea0c38decf
 # ╟─a4b9c073-39de-4097-8b30-b0b14617e843
 # ╠═0b78405a-ad60-44b8-a2b4-3fc57d866540
 # ╠═54cf2228-0041-476c-b56d-055b39afc596
@@ -3158,12 +3199,24 @@ version = "4.1.0+0"
 # ╠═55fa150f-3216-42ff-93a8-a61aee84b9c6
 # ╠═892f5a7b-83ec-4eb9-a11f-6a86b04ee4e4
 # ╠═e307c747-e1fd-449f-a269-d3984c5bcf39
+# ╠═3d0a13c4-a1df-401f-84df-37d1499af842
+# ╠═9d0e470d-51f5-4ec2-a49d-99827a08fab0
+# ╠═30039996-5922-4fb9-9ee1-22f98f2685ba
 # ╠═79c2f0f9-5cb4-4a19-ac97-14d174825c50
 # ╟─0d32114c-f8a7-4a09-8a8a-23e18f89b259
 # ╟─ce125c69-bc40-42d0-9ded-937257c9bc39
 # ╟─d5d6964c-0f6c-4d20-b97a-c6b8aab857d7
 # ╟─d7db0d1a-92fc-4a43-8285-7438f8d6a8e1
 # ╠═ae5820a2-26c3-4bf7-9dd5-d136eaf35038
+# ╠═6a99bdb9-7f3b-4292-8d9b-1c3c01f05e6e
+# ╠═919784e5-74b8-406b-b449-e0c3004cecfe
+# ╠═088afba7-5757-49fe-88c9-850396d882dc
+# ╠═2d17f6d3-eb87-4454-95b3-ca1a5dc4f52f
+# ╠═7106980e-6555-402c-ba2b-66330e01f342
+# ╟─a105e4e9-f732-4080-b2ea-bfce5c739a08
+# ╠═9e69b9d6-08e1-4a83-a5ea-102620bdd674
+# ╠═fd286a3b-b45c-4891-a1b3-7cf0ca6209fe
+# ╠═a6728349-7323-4e11-a77b-3b05e61992a2
 # ╟─45caddb4-8dad-451a-a6dc-fcda9e087dfe
 # ╠═93698b5a-1f3b-4c47-9e67-aff44f234c0f
 # ╠═7066ef95-8257-4950-a0a7-c15832e1725e
