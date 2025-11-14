@@ -53,7 +53,7 @@ For a non-rotating star in hydrostatic equilibrium (i.e., no time dependent beha
 ```math
 \begin{align*}
 \frac{dr}{dM_r} &= \frac{1}{4πr^2 ρ}, &
-\frac{dT}{dM_r} &= -\frac{3}{64π^2 ac}\frac{κ L_r}{T^3 r^4}, \\[1ex]
+\frac{dT}{dM_r} &= -\frac{3}{256π^2 σ_\text{SB}}\frac{κ L_r}{T^3 r^4}, \\[1ex]
 \frac{dP}{dM_r} &= -\frac{GM_r}{4πr^4}, &
 \frac{dL_r}{dM_r} &= ε.
 \end{align*}
@@ -69,7 +69,7 @@ The key variables are the radial coordinate ``r``; ``M_r``, the mass interior to
 - The local density, _ρ_:
 
   ```math
-  ρ(P,T) = \mathrm{9.91\!×\!{10}^{-28} \, kg} \;\; \frac{P - aT^4/3}{k_\text{B}T},
+  ρ(P,T) = \mathrm{9.91\!×\!{10}^{-28} \, kg} \;\; \frac{P - \frac{4σ_\text{SB}}{3c}T^4}{k_\text{B}T},
   ```
 
 - The mass absorption coefficient/opacity, _κ_:
@@ -148,10 +148,16 @@ solver = Shooting(RK4())#, jac_alg = AutoFiniteDiff())
 u₀_guess = [1e-9, 16e6, 1.2e16, 1e-10]
 
 # ╔═╡ 55fa150f-3216-42ff-93a8-a61aee84b9c6
-T_c_guesses = logrange(3e5, 1e10, length = 5000)
+T_c_guesses = logrange(3e5, 1e10, length = 3)
 
 # ╔═╡ 892f5a7b-83ec-4eb9-a11f-6a86b04ee4e4
-P_c_guesses = logrange(1e12, 1e20, length = 5000)
+P_c_guesses = logrange(1e12, 1e20, length = 3)
+
+# ╔═╡ 79c2f0f9-5cb4-4a19-ac97-14d174825c50
+# ╠═╡ disabled = true
+#=╠═╡
+solution = solve(bvproblem, solver, isoutofdomain = (u, p, Mᵣ) -> any(<(0), u), abstol = 0.1, tstops=M_saves, adaptive = false)
+  ╠═╡ =#
 
 # ╔═╡ 0d32114c-f8a7-4a09-8a8a-23e18f89b259
 md"""
@@ -200,7 +206,7 @@ Specific power ``ε(ρ, T)`` as a function of local density and temperature.
 """
 function specificpower(ρ, T)
     ρ = ustrip(kg/m^3, ρ)
-    T₆ = T/1e6K |> NoUnits
+    T₆ = ustrip(K, T)/1e6
     ε̃₀ = ρ / T₆^(2//3) * exp(-33.80/∛T₆)
     ε̃₁ = ρ^2 / T₆^3 * exp(-4403/T₆)
     return 0.136W/kg * (ε̃₀ + 3.49e12 * ε̃₁)
@@ -278,12 +284,6 @@ bvproblem = BVProblem(bvpfunction, u₀_guess, Mᵣ_domain)
 
 # ╔═╡ 7118c7f2-07c3-4e79-98b1-6bdab1ccd2c5
 M_saves = range(Mᵣ_domain..., length=10)
-
-# ╔═╡ 79c2f0f9-5cb4-4a19-ac97-14d174825c50
-# ╠═╡ disabled = true
-#=╠═╡
-solution = solve(bvproblem, solver, isoutofdomain = (u, p, Mᵣ) -> any(<(0), u), abstol = 0.1, tstops=M_saves, adaptive = false)
-  ╠═╡ =#
 
 # ╔═╡ e307c747-e1fd-449f-a269-d3984c5bcf39
 begin
