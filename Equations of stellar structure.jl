@@ -276,33 +276,6 @@ function stellarboundary!(residual, u, p, Mᵣ)
     return residual
 end
 
-# ╔═╡ 00000000-0000-0000-0000-000000000001
-PLUTO_PROJECT_TOML_CONTENTS = """
-[deps]
-BoundaryValueDiffEq = "764a87c0-6b3e-53db-9096-fe964310641d"
-CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
-ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
-OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
-PhysicalConstants = "5ad8b20f-a522-5ce9-bfc9-ddf1d5bda6ab"
-PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
-SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
-Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
-UnitfulAstro = "6112ee07-acf9-5e0f-b108-d242c714bf9f"
-
-[compat]
-BoundaryValueDiffEq = "~5.18.0"
-CairoMakie = "~0.15.6"
-ForwardDiff = "~1.3.0"
-OrdinaryDiffEq = "~6.103.0"
-PhysicalConstants = "~0.2.4"
-PlutoUI = "~0.7.73"
-RecursiveArrayTools = "~3.39.0"
-SciMLBase = "~2.124.0"
-Unitful = "~1.25.1"
-UnitfulAstro = "~1.2.2"
-"""
-
 # ╔═╡ Cell order:
 # ╟─da3e18e3-0cda-440b-932e-7c09988e28dc
 # ╟─03118617-5cca-4400-9e87-1562d42d7d44
@@ -349,4 +322,3 @@ UnitfulAstro = "~1.2.2"
 # ╟─c68905f0-23ce-498d-a478-e6e41c19308b
 # ╠═817a6fc5-b327-48ea-9cda-4a4217931cc9
 # ╠═2267ba11-3424-48a5-b219-07ee3b2bc4d9
-# ╟─00000000-0000-0000-0000-000000000001
