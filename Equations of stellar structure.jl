@@ -176,7 +176,7 @@ md"""
 
 # ╔═╡ d7db0d1a-92fc-4a43-8285-7438f8d6a8e1
 md"""
-Plot ``r(M)``, ``T(M)``, and ``L(M)`` from ``0`` to ``M_r`` (It will probably be easier to read if you use three different plots rather than one panel for all three curves.) Use logarithmic y axes and a linear x axis.
+Plot ``r(M)``, ``T(M)``, and ``L(M)`` from ``0`` to ``M_r`` (It will probably be easier to read if you use three different plots rather than one panel for all three curves.) Use logarithmic y axis and a linear x axis.
 """
 
 # ╔═╡ 6a99bdb9-7f3b-4292-8d9b-1c3c01f05e6e
@@ -269,7 +269,7 @@ end
 
 # ╔═╡ 6ac5b3da-c540-48ea-95b3-b51719ec36b1
 # bvpfunction = BVPFunction(odefun, stellarboundary)
-bvpfunction = TwoPointBVPFunction(odefun, (bca, bcb))
+bvpfunction = TwoPointBVPFunction(odefun, (bca, bcb); syms = [:r, :T, :P, :Lᵣ])
 
 # ╔═╡ 2267ba11-3424-48a5-b219-07ee3b2bc4d9
 const M_star = 100Msun
@@ -312,6 +312,9 @@ ivp = ODEProblem(odefun, u₀_guess, Mᵣ_domain)
 
 # ╔═╡ 9d0e470d-51f5-4ec2-a49d-99827a08fab0
 sol = solve(ivp, RK4())
+
+# ╔═╡ f9b723c3-e720-4c1e-a1a2-1d15648b6300
+lines(sol, axis = (; yscale = log10))
 
 # ╔═╡ 919784e5-74b8-406b-b449-e0c3004cecfe
 lines(sol.t, sol[1,:], axis = (; axisproperties..., ylabel = "r (m)"))
@@ -3237,6 +3240,7 @@ version = "4.1.0+0"
 # ╟─d7db0d1a-92fc-4a43-8285-7438f8d6a8e1
 # ╠═ae5820a2-26c3-4bf7-9dd5-d136eaf35038
 # ╠═6a99bdb9-7f3b-4292-8d9b-1c3c01f05e6e
+# ╠═f9b723c3-e720-4c1e-a1a2-1d15648b6300
 # ╠═919784e5-74b8-406b-b449-e0c3004cecfe
 # ╠═088afba7-5757-49fe-88c9-850396d882dc
 # ╠═2d17f6d3-eb87-4454-95b3-ca1a5dc4f52f
