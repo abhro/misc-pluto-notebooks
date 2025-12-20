@@ -197,8 +197,10 @@ md"""
 Mass absorption coefficient
 """
 function massabsorpcoeff(ρ, T)
+    κ₀ = 0.035m^2/kg
+    κ₁ = 6.44e18m^2/kg
     scale_factor = ustrip(kg/m^3, ρ)/ustrip(K, T)^3.5
-    return (0.035 + 6.44e18 * scale_factor) * m^2/kg
+    return κ₀ + κ₁ * scale_factor
 end
 
 # ╔═╡ a6728349-7323-4e11-a77b-3b05e61992a2
@@ -309,14 +311,10 @@ solution = solve(bvproblem, solver, isoutofdomain = (u, p, Mᵣ) -> any(<(0), u)
   ╠═╡ =#
 
 # ╔═╡ f85a4f6f-9b10-4520-81fa-a1c6cede6f4b
-#=╠═╡
 solutions
-  ╠═╡ =#
 
 # ╔═╡ 30039996-5922-4fb9-9ee1-22f98f2685ba
-#=╠═╡
 solutions
-  ╠═╡ =#
 
 # ╔═╡ 3d0a13c4-a1df-401f-84df-37d1499af842
 ivp = ODEProblem(odefun!, u₀_guess, Mᵣ_domain)
@@ -362,7 +360,6 @@ end
   ╠═╡ =#
 
 # ╔═╡ d4c3d589-617f-4ee8-a254-fab99978ba08
-#=╠═╡
 begin
     solutions = Matrix{Any}(undef, length(T_c_guesses), length(P_c_guesses))
     for (T_idx, T_c) in enumerate(T_c_guesses), (P_idx, P_c) in enumerate(P_c_guesses)
@@ -380,7 +377,6 @@ begin
         end
     end
 end
-  ╠═╡ =#
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
