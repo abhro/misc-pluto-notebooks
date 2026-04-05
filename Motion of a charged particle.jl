@@ -602,21 +602,6 @@ let
     r = track_motion(fig, ax, trajectories)
 end
 
-# ╔═╡ 00000000-0000-0000-0000-000000000001
-PLUTO_PROJECT_TOML_CONTENTS = """
-[deps]
-GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
-PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
-Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
-
-[compat]
-GLMakie = "~0.13.6"
-PlutoUI = "~0.7.72"
-StaticArrays = "~1.9.15"
-Unitful = "~1.25.1"
-"""
-
 # ╔═╡ Cell order:
 # ╟─d60444c0-ddce-11ef-2e4e-234174458fd9
 # ╠═c8314c51-ff6d-459a-bdd6-0ff217a2ef47
@@ -692,4 +677,3 @@ Unitful = "~1.25.1"
 # ╠═2509dad4-0058-42f5-8a24-1dbec0b6772b
 # ╠═9c4ad1df-9076-4193-97d9-4e058776443c
 # ╠═27707139-f329-4908-9342-d3acc560b7d7
-# ╟─00000000-0000-0000-0000-000000000001
