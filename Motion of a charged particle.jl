@@ -724,7 +724,7 @@ let
     fig = Figure()
     ax = Axis3(fig[1,1])
 
-    b = bounds(Vector{Point3f}(vcat(x, gc, projection)))
+    b = bounds(vcat(x, gc, projection))
     limits!(ax, b...)
 
     trajectories = (x,)
@@ -739,7 +739,6 @@ let
     end
     # leg = Legend(fig[1,2], ax, labels)
     r = track_motion(fig, ax, trajectories)
-    (r, fig)
 end
 
 # ╔═╡ Cell order:
