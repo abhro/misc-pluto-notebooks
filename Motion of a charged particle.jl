@@ -80,10 +80,10 @@ md"""
 """
 
 # ╔═╡ 2d8bf6cc-0751-4b4e-bd3c-57ef04448d20
-guiding_center_plot_binder = @bind do_guiding_center CheckBox(default = true);
+guiding_center_plot_checkbox = @bind do_guiding_center CheckBox(default = true);
 
 # ╔═╡ baf9b28c-b16e-421a-8813-572bfb2cab35
-projection_plot_binder = @bind do_proj CheckBox(default = true);
+projection_plot_checkbox = @bind do_proj CheckBox(default = true);
 
 # ╔═╡ acdea016-7f32-4f37-a5dc-8e7998a6c3b9
 charge_selector = @bind q Select([u"q" => "+e", -u"q" => "-e"]);
@@ -101,12 +101,12 @@ Controllers for initial velocity
 
 # ╔═╡ f909adaa-cd08-47c6-8adb-ef2a3796ffe3
 md"""
-Plot projection: $projection_plot_binder
+Plot projection: $projection_plot_checkbox
 """
 
 # ╔═╡ 16a381a7-e3ac-42be-b94d-05a1fba351e5
 md"""
-Plot guiding center: $guiding_center_plot_binder
+Plot guiding center: $guiding_center_plot_checkbox
 """
 
 # ╔═╡ 88ada895-2d26-46b4-abfa-4e0dd7187339
@@ -218,7 +218,7 @@ Magnetic field strength:
 """
 
 # ╔═╡ 36146cf5-c26a-4759-839a-13c2adc29d96
-B = 30.0u"μT";
+B = 30.0u"T";
 
 # ╔═╡ 73d642db-b214-45c3-a16f-558c18a30011
 ω_c = q * B / m |> u"rad/s"
@@ -248,6 +248,7 @@ v₀_parallel_slider = @bind v_parallel Slider(v_range, show_value = true, defau
 # ╔═╡ 32347eb2-3316-4e9c-bd06-434b13e38e2a
 md"""
 Larmor radius (gyroradius): $(hypot(v_perp, v_parallel)/ω_c |> u"m")
+Gyroperiod: $(2π*u"rad"/ω_c)
 """
 
 # ╔═╡ b06f0f86-eaa1-4dbb-9c21-1baa251d4c10
@@ -263,13 +264,50 @@ v₀ = SVector(v_perp*cos(γ₀), v_perp*sin(γ₀), v_parallel)
 
 # ╔═╡ 4687d979-afe8-4116-b4e7-614daa2d46be
 md"""
-Plot projection: $projection_plot_binder
+Plot projection: $projection_plot_checkbox
 """
 
 # ╔═╡ 5659e5a1-ba89-4ab7-86a2-bbc59ef48903
 md"""
-Plot guiding center: $guiding_center_plot_binder
+Plot guiding center: $guiding_center_plot_checkbox
 """
+
+# ╔═╡ c4914c73-bbf5-4dab-861a-db045f0fc5dd
+# ╠═╡ disabled = true
+#=╠═╡
+let
+    gc = SVector.(0u"m", 0u"m", v_perp .* tspan)
+    ξ = gyromotion.(tspan, Ref((; ω_c, γ₀, v_perp, v_parallel, x₀, v₀)))
+    x = ustrip.(u"m", Point3.(gc + ξ))
+    gc = let
+        gc_stripped = Vector{Point3f}(undef, length(gc))
+        for i in eachindex(gc)
+            gc_stripped[i] = ustrip(u"m", Point3(gc[i]))
+        end
+        gc_stripped
+    end
+
+    projection = projectxy.(x)
+
+    fig = Figure()
+    ax = Axis3(fig[1,1])
+
+    # leg = Legend(fig[1,2], ax, ["Particle", "Projection", "Gyrocenter"])
+
+    b = bounds(vcat(x, gc, projection))
+    limits!(ax, b...)
+
+    trajectories = (x,)
+    if do_proj
+        trajectories = (trajectories..., projection)
+    end
+    if do_guiding_center
+        trajectories = (trajectories..., gc)
+    end
+
+    r = track_motion(fig, ax, trajectories)
+end
+  ╠═╡ =#
 
 # ╔═╡ 71069a27-0467-4352-9aff-20db6a27a663
 md"""
@@ -364,6 +402,44 @@ r3 = Ref(SVector(F.y, -F.x, 0u"N")/(q*B)) .* tspan;
 # ╔═╡ 82ba8cd1-c7d3-4b29-8ec8-cfd5999d3b84
 r4 = Ref(SVector(0u"m/s^2", 0u"m/s^2", F.z/2m)) .* tspan.^2;
 
+# ╔═╡ 2d038925-3025-415d-9198-750101aeb703
+# ╠═╡ disabled = true
+#=╠═╡
+let
+    gc = (Ref(r1) .+ r2 .+ r3E .+ r4E)
+    # gc = SVector.(0u"m", 0u"m", v_perp .* tspan)
+    ξ = gyromotion.(tspan, Ref((; ω_c, γ₀, v_perp, v_parallel, x₀, v₀)))
+    x = ustrip.(u"m", Point3.(gc + ξ))
+    gc = let
+        gc_stripped = Vector{Point3f}(undef, length(gc))
+        for i in eachindex(gc)
+            gc_stripped[i] = ustrip(u"m", Point3(gc[i]))
+        end
+        gc_stripped
+    end
+
+    projection = projectxy.(x)
+
+    fig = Figure()
+    ax = Axis3(fig[1,1])
+
+    # leg = Legend(fig[1,2], ax, ["Particle", "Projection", "Gyrocenter"])
+
+    b = bounds(vcat(x, gc, projection))
+    limits!(ax, b...)
+
+    trajectories = (x,)
+    if do_proj
+        trajectories = (trajectories..., projection)
+    end
+    if do_guiding_center
+        trajectories = (trajectories..., gc)
+    end
+
+    r = track_motion(fig, ax, trajectories)
+end
+  ╠═╡ =#
+
 # ╔═╡ 8f9070d9-9412-4ccd-b84a-d8a20b6f7059
 md"""
 ## Constant and uniform **E** and **B** fields
@@ -451,8 +527,18 @@ r4E = Ref(SVector(0u"m/s^2", 0u"m/s^2", q*E.z/2m)) .* tspan.^2;
 md"""
 Initial velocity:
 - Perpendicular component: ``v_{0⟂}`` = $(v₀_perp_slider)
-- Parallel component: v\_0∥ = $(v₀_parallel_slider)
+- Parallel component: ``v_{0∥}`` = $(v₀_parallel_slider)
 - Velocity phase angle: γ₀ = $(γ₀_slider)
+"""
+
+# ╔═╡ d99f34e3-8c27-4362-b745-64b0abf64f21
+md"""
+Plot projection: $projection_plot_checkbox
+"""
+
+# ╔═╡ ea8f6887-368a-4d13-89f8-d0f60e29af1d
+md"""
+Plot guiding center: $guiding_center_plot_checkbox
 """
 
 # ╔═╡ bd6f39b4-a999-44d2-a8b0-646c1e0a26a3
@@ -579,9 +665,10 @@ let
     # leg = Legend(fig[1,2], ax, ["Particle", "Projection", "Gyrocenter"])
 
     # b = bounds(vcat(x, gc, projection))
-    zlims!(ax, [-0.1, 0.1])
+    # zlims!(ax, [-0.1, 0.1])
 
-    r = track_motion(fig, ax, (ξ, ))
+    # r = track_motion(fig, ax, (ξ, ))
+    r = track_motion(fig, ax, ([ustrip.(u"m", x) for x in ξ], ))
 end
 
 # ╔═╡ 2509dad4-0058-42f5-8a24-1dbec0b6772b
@@ -598,6 +685,9 @@ end
 # ╔═╡ 9c4ad1df-9076-4193-97d9-4e058776443c
 Unitful.uconvert(u, p::Point) = uconvert.(u, p)
 
+# ╔═╡ 681222bf-0091-4cd4-bfe1-b51a34545e48
+# Unitful.ustrip(u, p::Point) = ustrip.(u, p)
+
 # ╔═╡ 27707139-f329-4908-9342-d3acc560b7d7
 """
     projectxy(p::Point3)
@@ -605,81 +695,6 @@ Unitful.uconvert(u, p::Point) = uconvert.(u, p)
 Project a point in 3d to the xy-plane. (Zero out the last component).
 """
 projectxy(p::Point3{T}) where T = Point3(p[1], p[2], zero(T));
-
-# ╔═╡ c4914c73-bbf5-4dab-861a-db045f0fc5dd
-# ╠═╡ disabled = true
-#=╠═╡
-let
-    gc = SVector.(0u"m", 0u"m", v_perp .* tspan)
-    ξ = gyromotion.(tspan, Ref((; ω_c, γ₀, v_perp, v_parallel, x₀, v₀)))
-    x = ustrip.(u"m", Point3.(gc + ξ))
-    gc = let
-        gc_stripped = Vector{Point3f}(undef, length(gc))
-        for i in eachindex(gc)
-            gc_stripped[i] = ustrip(u"m", Point3(gc[i]))
-        end
-        gc_stripped
-    end
-
-    projection = projectxy.(x)
-
-    fig = Figure()
-    ax = Axis3(fig[1,1])
-
-    # leg = Legend(fig[1,2], ax, ["Particle", "Projection", "Gyrocenter"])
-
-    b = bounds(vcat(x, gc, projection))
-    limits!(ax, b...)
-
-    trajectories = (x,)
-    if do_proj
-        trajectories = (trajectories..., projection)
-    end
-    if do_guiding_center
-        trajectories = (trajectories..., gc)
-    end
-
-    r = track_motion(fig, ax, trajectories)
-end
-  ╠═╡ =#
-
-# ╔═╡ 2d038925-3025-415d-9198-750101aeb703
-# ╠═╡ disabled = true
-#=╠═╡
-let
-    gc = (Ref(r1) .+ r2 .+ r3E .+ r4E)
-    # gc = SVector.(0u"m", 0u"m", v_perp .* tspan)
-    ξ = gyromotion.(tspan, Ref((; ω_c, γ₀, v_perp, v_parallel, x₀, v₀)))
-    x = ustrip.(u"m", Point3.(gc + ξ))
-    gc = let
-        gc_stripped = Vector{Point3f}(undef, length(gc))
-        for i in eachindex(gc)
-            gc_stripped[i] = ustrip(u"m", Point3(gc[i]))
-        end
-        gc_stripped
-    end
-
-    projection = projectxy.(x)
-
-    fig = Figure()
-    ax = Axis3(fig[1,1])
-
-    # leg = Legend(fig[1,2], ax, ["Particle", "Projection", "Gyrocenter"])
-
-    b = bounds(vcat(x, gc, projection))
-    limits!(ax, b...)
-
-    trajectories = (x,)
-    if do_proj
-        trajectories = (trajectories..., projection)
-    end
-    if do_guiding_center
-        trajectories = (trajectories..., gc)
-    end
-
-    r = track_motion(fig, ax, trajectories)
-end
-  ╠═╡ =#
 
 # ╔═╡ 99274bb9-7598-455a-b450-c02782184e29
 let
@@ -726,7 +741,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [compat]
-GLMakie = "~0.13.8"
+GLMakie = "~0.13.9"
 PlutoUI = "~0.7.80"
 StaticArrays = "~1.9.18"
 Unitful = "~1.28.0"
@@ -738,7 +753,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "4cea5bb9e56f33afd4d00fbbf41b96b040f2fcfe"
+project_hash = "39b6c7afdb61094b053d3a75e9881adf2d052836"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1050,9 +1065,9 @@ version = "2.2.9"
 
 [[deps.Expat_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "27af30de8b5445644e8ffe3bcb0d72049c089cf1"
+git-tree-sha1 = "9cb7fe11da6adb8683cbacf8aa9b5237941e3a75"
 uuid = "2e619515-83b5-522b-bb60-26c02a35a201"
-version = "2.7.3+0"
+version = "2.7.5+0"
 
 [[deps.Extents]]
 git-tree-sha1 = "b309b36a9e02fe7be71270dd8c0fd873625332b4"
@@ -1061,9 +1076,9 @@ version = "0.1.6"
 
 [[deps.FFMPEG_jll]]
 deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "JLLWrappers", "LAME_jll", "Libdl", "Ogg_jll", "OpenSSL_jll", "Opus_jll", "PCRE2_jll", "Zlib_jll", "libaom_jll", "libass_jll", "libfdk_aac_jll", "libva_jll", "libvorbis_jll", "x264_jll", "x265_jll"]
-git-tree-sha1 = "66381d7059b5f3f6162f28831854008040a4e905"
+git-tree-sha1 = "cac41ca6b2d399adfc95e51240566f8a60a80806"
 uuid = "b22a6f82-2f65-5046-a5b2-351ab43fb4e5"
-version = "8.0.1+1"
+version = "8.1.0+0"
 
 [[deps.FFTA]]
 deps = ["AbstractFFTs", "DocStringExtensions", "LinearAlgebra", "MuladdMacro", "Primes", "Random", "Reexport"]
@@ -1182,9 +1197,9 @@ version = "3.4.1+1"
 
 [[deps.GLMakie]]
 deps = ["ColorTypes", "Colors", "FileIO", "FixedPointNumbers", "FreeTypeAbstraction", "GLFW", "GeometryBasics", "LinearAlgebra", "Makie", "Markdown", "MeshIO", "ModernGL", "Observables", "PrecompileTools", "Printf", "ShaderAbstractions", "StaticArrays"]
-git-tree-sha1 = "56335175a66c30ca0e503ad717d366cd9e1663b1"
+git-tree-sha1 = "1e0d427d2c73eb5a7564394df2c9fec8b85e7805"
 uuid = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
-version = "0.13.8"
+version = "0.13.9"
 
 [[deps.GeometryBasics]]
 deps = ["EarCut_jll", "Extents", "IterTools", "LinearAlgebra", "PrecompileTools", "Random", "StaticArrays"]
@@ -1576,9 +1591,9 @@ version = "0.5.16"
 
 [[deps.Makie]]
 deps = ["Animations", "Base64", "CRC32c", "ColorBrewer", "ColorSchemes", "ColorTypes", "Colors", "ComputePipeline", "Contour", "Dates", "DelaunayTriangulation", "Distributions", "DocStringExtensions", "Downloads", "FFMPEG_jll", "FileIO", "FilePaths", "FixedPointNumbers", "Format", "FreeType", "FreeTypeAbstraction", "GeometryBasics", "GridLayoutBase", "ImageBase", "ImageIO", "InteractiveUtils", "Interpolations", "IntervalSets", "InverseFunctions", "Isoband", "KernelDensity", "LaTeXStrings", "LinearAlgebra", "MacroTools", "Markdown", "MathTeXEngine", "Observables", "OffsetArrays", "PNGFiles", "Packing", "Pkg", "PlotUtils", "PolygonOps", "PrecompileTools", "Printf", "REPL", "Random", "RelocatableFolders", "Scratch", "ShaderAbstractions", "Showoff", "SignedDistanceFields", "SparseArrays", "Statistics", "StatsBase", "StatsFuns", "StructArrays", "TriplotBase", "UnicodeFun", "Unitful"]
-git-tree-sha1 = "d1b974f376c24dad02c873e951c5cd4e351cd7c2"
+git-tree-sha1 = "68af66ec16af8b152309310251ecb4fbfe39869f"
 uuid = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
-version = "0.24.8"
+version = "0.24.9"
 
     [deps.Makie.extensions]
     MakieDynamicQuantitiesExt = "DynamicQuantities"
@@ -2506,6 +2521,8 @@ version = "1.13.0+0"
 # ╠═a1fc3ec1-9b51-4fee-80e8-40b1d309df59
 # ╠═40dd493c-21fb-4a29-a7b3-89a884345ce5
 # ╟─3d48e09d-95bf-45a8-a3e2-b6595f9e6441
+# ╟─d99f34e3-8c27-4362-b745-64b0abf64f21
+# ╟─ea8f6887-368a-4d13-89f8-d0f60e29af1d
 # ╠═fb68ec9d-9112-47f2-afdd-5cd772e61e49
 # ╠═768ecc35-b7ac-4def-a1d6-6dcd90811769
 # ╠═99274bb9-7598-455a-b450-c02782184e29
@@ -2520,6 +2537,7 @@ version = "1.13.0+0"
 # ╠═6d736b0b-9e26-4800-8925-f287fc5d292b
 # ╠═2509dad4-0058-42f5-8a24-1dbec0b6772b
 # ╠═9c4ad1df-9076-4193-97d9-4e058776443c
+# ╠═681222bf-0091-4cd4-bfe1-b51a34545e48
 # ╠═27707139-f329-4908-9342-d3acc560b7d7
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
