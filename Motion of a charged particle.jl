@@ -339,7 +339,7 @@ md"""
 ```math
 \begin{align}
 \mathbf{v}(t)
-&= \mathbf{u} + \underbrace{\mathbf{v}_\text{D} + \left(\frac{F_∥}{m} t + v_{∥0}\right) \hat{\mathbf{z}}}_{\mathbf{v}_g} \\
+&= \mathbf{u} + \underbrace{\mathbf{v}_\text{D} + \left(\frac{F_∥}{m} t + v_{0∥}\right) \hat{\mathbf{z}}}_{\mathbf{v}_g} \\
 &= \begin{pmatrix}
     v_{0⟂} \sin(ω_c t + γ_0) \\
     v_{0⟂} \cos(ω_c t + γ_0) \\
