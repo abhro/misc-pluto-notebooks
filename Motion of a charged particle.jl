@@ -31,6 +31,9 @@ using StaticArrays
 # ╔═╡ 87d06c27-9d29-489b-9fba-233c6d5d9203
 using PlutoUI: Slider
 
+# ╔═╡ 763fc16e-cd10-4666-8b55-a7fda4f019be
+using LinearAlgebra
+
 # ╔═╡ d60444c0-ddce-11ef-2e4e-234174458fd9
 md"""
 # Motion of single charged particle
@@ -115,10 +118,7 @@ Time span:
 """
 
 # ╔═╡ 6068010f-df5c-41a8-94d3-288eb71220d5
-tspan = range(0.0u"s", 3000.0u"s", length = 6001);
-
-# ╔═╡ 4e615923-0ac5-4061-ab91-95222d76a0cf
-
+tspan = range(0.0u"s", 30.0u"s", length = 601);
 
 # ╔═╡ ee41070b-b68b-4f5f-98b6-c9843f9587eb
 md"""
@@ -218,7 +218,7 @@ Magnetic field strength:
 """
 
 # ╔═╡ 36146cf5-c26a-4759-839a-13c2adc29d96
-B = 30.0u"T";
+B = 10.0u"nT";
 
 # ╔═╡ 73d642db-b214-45c3-a16f-558c18a30011
 ω_c = q * B / m |> u"rad/s"
@@ -248,6 +248,7 @@ v₀_parallel_slider = @bind v_parallel Slider(v_range, show_value = true, defau
 # ╔═╡ 32347eb2-3316-4e9c-bd06-434b13e38e2a
 md"""
 Larmor radius (gyroradius): $(hypot(v_perp, v_parallel)/ω_c |> u"m")
+
 Gyroperiod: $(2π*u"rad"/ω_c)
 """
 
@@ -397,10 +398,13 @@ r1 = v_perp/ω_c * SVector(cos(γ₀), -sin(γ₀), 0);
 r2 = Ref(SVector(0u"m/s", 0u"m/s", v_parallel)) .* tspan;
 
 # ╔═╡ 427c7557-f201-4279-8c67-d080f180b6d3
-r3 = Ref(SVector(F.y, -F.x, 0u"N")/(q*B)) .* tspan;
+r3F = Ref(SVector(F.y, -F.x, 0u"N")/(q*B)) .* tspan;
 
 # ╔═╡ 82ba8cd1-c7d3-4b29-8ec8-cfd5999d3b84
-r4 = Ref(SVector(0u"m/s^2", 0u"m/s^2", F.z/2m)) .* tspan.^2;
+r4F = Ref(SVector(0u"m/s^2", 0u"m/s^2", F.z/2m)) .* tspan.^2;
+
+# ╔═╡ f1f7aade-2a49-4a92-be9c-889d74e39f1d
+gcF = (Ref(r1) .+ r2 .+ r3F .+ r4F)
 
 # ╔═╡ 2d038925-3025-415d-9198-750101aeb703
 # ╠═╡ disabled = true
@@ -491,14 +495,17 @@ md"""
 where ``\mathbf{v}_E = \frac{1}{B} \left(E_y \hat{\mathbf{x}} - E_x \hat{\mathbf{y}}\right)``.
 """
 
-# ╔═╡ 75baec21-d3fa-487a-b8da-e41d88e35c8d
-E_perp = 0.0u"V/m";
-
 # ╔═╡ 90a32382-7d24-400d-aa06-545b29a53177
-E_parallel = Point2f(0.3, 0.3)u"V/m";
+E_perp = Point2f(0.0, 0.0003)u"mV/m";
+
+# ╔═╡ 75baec21-d3fa-487a-b8da-e41d88e35c8d
+E_parallel = 0.0u"V/m";
 
 # ╔═╡ ad936609-ba30-48a0-9bf7-491b8d963d1c
-E = SVector(E_parallel[1], E_parallel[2], E_perp)
+E = SVector(E_perp[1], E_perp[2], E_parallel) .|> u"V/m"
+
+# ╔═╡ 5ef4bee3-36cf-438c-9bc6-3a6dac605954
+E×(B*SVector(0, 0, 1)) / B^2 .|> u"m/s"
 
 # ╔═╡ 11f230a0-2384-47e6-b88c-a95cad2d3c85
 md"""
@@ -540,6 +547,37 @@ Plot projection: $projection_plot_checkbox
 md"""
 Plot guiding center: $guiding_center_plot_checkbox
 """
+
+# ╔═╡ 768ecc35-b7ac-4def-a1d6-6dcd90811769
+# ╠═╡ disabled = true
+#=╠═╡
+let
+    fig = Figure()
+    ax = Axis3(fig[1,1])
+
+    # leg = Legend(fig[1,2], ax, ["Particle", "Projection", "Gyrocenter"])
+    ξ = [ustrip.(u"m", x) for x in ξ]
+    b = bounds(ξ)
+    xlims!(ax, b[1])
+    ylims!(ax, b[2])
+    # zlims!(ax, [-0.1, 0.1])
+
+    # r = track_motion(fig, ax, (ξ, ))
+    r = track_motion(fig, ax, ξ)
+end
+  ╠═╡ =#
+
+# ╔═╡ 6ef3b240-50fd-40ef-b88e-80016c9763c8
+# plot(ustrip.(u"m", gcE.+ξ))
+
+# ╔═╡ fe22e9cc-e129-4b32-b022-a7864739235d
+# plot(ustrip.(u"m", ξ))
+
+# ╔═╡ 9a453ed7-dae4-41c3-95a5-b1923db28d57
+# plot(ustrip.(u"m", gcE))
+
+# ╔═╡ f6343498-ad2e-4dc8-a015-afe24ad4e129
+gcE = Point3.(Ref(r1) .+ r2 .+ r3E .+ r4E)
 
 # ╔═╡ bd6f39b4-a999-44d2-a8b0-646c1e0a26a3
 md"""
@@ -605,6 +643,39 @@ md"""
 ## Helper functions
 """
 
+# ╔═╡ 44ca7c41-ecdc-4f32-99b4-834b89e60ad6
+"""
+    track_motion(fig, ax, trajectory)
+
+Track motion of a single trajectory (one particle only).
+
+### Arguments
+- `fig`: Makie `Figure`
+- `ax`: Makie `Axis`/`Axis3`
+- `trajectory`: list of points
+- `t`: parameter with which to define parameteric curve
+"""
+function track_motion(fig, ax, trajectory::AbstractVector{T}) where T <: Union{Point, SVector}
+    live_traj = Observable([trajectory[begin]])
+    lead_point = Observable(trajectory[begin])
+    sizehint!(live_traj[], length(trajectory))
+    # draw the start of this new trajectory
+    lines!(ax, live_traj)
+    scatter!(ax, lead_point)
+
+    r = Record(fig) do io
+        # over each timestep/frame
+        for r in trajectory
+            # update leading point
+            lead_point[] = r
+            # add new point to trajectory
+            live_traj[] = push!(live_traj[], r)
+            recordframe!(io)
+        end
+    end
+    return r
+end
+
 # ╔═╡ 135f1d0d-8403-47c5-9aae-5efa2b995baf
 """
     track_motion(fig, ax, trajectories, t = eachindex(trajectories[begin]))
@@ -614,29 +685,38 @@ md"""
 - `ax`: Makie `Axis`/`Axis3`
 - `trajectories`: list of lists, i.e., similar to `Vector{Vector{Point}}`. Each item of trajectories is `Vector{Point}`, which defines a trajectory.
 - `t`: parameter with which to define parameteric curve
+- `labels`: TODO
 """
-function track_motion(fig, ax, trajectories, t = eachindex(trajectories[begin]))
+function track_motion(fig, ax, trajectories, t = eachindex(trajectories[begin]), labels = nothing)
     n = length(trajectories)
     live_traj = Observable[]
     lead_points = Observable[]
-    for traj in trajectories
+    for (i, traj) in enumerate(trajectories)
         push!(live_traj, Observable(traj[begin:begin+1]))
         push!(lead_points, Observable(traj[begin+1]))
 
         # draw the start of this new trajectory
         lines!(ax, live_traj[end])
-        scatter!(ax, lead_points[end])
+        if isnothing(labels)
+			scatter!(ax, lead_points[end])
+		else
+			scatter!(ax, lead_points[end], label=labels[i])
+		end
     end
+
+    if !isnothing(labels)
+        Legend(fig[1,2], ax)
+	end
 
     r = Record(fig) do io
         # over each timestep/frame
         for (i, t_i) in enumerate(t)
             for k_traj in 1:n
                 x_i = trajectories[k_traj][i]
-                # add new point to trajectory
-                push!(live_traj[k_traj][], x_i)
                 # update leading point
                 lead_points[k_traj][] = x_i
+                # add new point to trajectory
+                push!(live_traj[k_traj][], x_i)
                 live_traj[k_traj][] = live_traj[k_traj][]
             end
             recordframe!(io)
@@ -648,36 +728,29 @@ end
 # ╔═╡ 6d736b0b-9e26-4800-8925-f287fc5d292b
 function gyromotion(time, params)
     (; v_perp, v_parallel, ω_c, γ₀, x₀) = params
-    return SVector(
+    return Point3(
         -v_perp/ω_c * cos(ω_c * time + γ₀),
         -v_perp/ω_c * sin(ω_c * time + γ₀),
-        zero(params.x₀.z))
+        zero(x₀.z))
 end
 
 # ╔═╡ fb68ec9d-9112-47f2-afdd-5cd772e61e49
 ξ = gyromotion.(tspan, Ref((; ω_c, γ₀, v_perp, v_parallel, x₀, v₀)))
 
-# ╔═╡ 768ecc35-b7ac-4def-a1d6-6dcd90811769
-let
-    fig = Figure()
-    ax = Axis3(fig[1,1])
-
-    # leg = Legend(fig[1,2], ax, ["Particle", "Projection", "Gyrocenter"])
-
-    # b = bounds(vcat(x, gc, projection))
-    # zlims!(ax, [-0.1, 0.1])
-
-    # r = track_motion(fig, ax, (ξ, ))
-    r = track_motion(fig, ax, ([ustrip.(u"m", x) for x in ξ], ))
-end
+# ╔═╡ 35d14f11-4363-4392-a4e2-8bb9ff6db174
+xE = Point3.(gcE + ξ)
 
 # ╔═╡ 2509dad4-0058-42f5-8a24-1dbec0b6772b
-function bounds(points)
+function bounds(points, eps=0.1)
     d = length(eltype(points))
     T = eltype(eltype(points))
     bounds = Vector{Tuple{T,T}}(undef, d)
     for i in 1:d
-        bounds[i] = extrema(x[i] for x in points)
+        min, max = extrema(x[i] for x in points)
+        if min == max
+			(min, max) = min-T(eps), max+T(eps)
+		end
+        bounds[i] = (min, max)
     end
     bounds
 end
@@ -696,46 +769,71 @@ Project a point in 3d to the xy-plane. (Zero out the last component).
 """
 projectxy(p::Point3{T}) where T = Point3(p[1], p[2], zero(T));
 
+# ╔═╡ 21b479b1-27bb-4cdb-9da6-84f4265db7ab
+projectionE = projectxy.(xE)
+
 # ╔═╡ 99274bb9-7598-455a-b450-c02782184e29
 let
-    gc = (Ref(r1) .+ r2 .+ r3E .+ r4E)
-    # gc = SVector.(0u"m", 0u"m", v_perp .* tspan)
-    x = ustrip.(u"m", Point3.(gc + ξ))
-    gc = let
-        gc_stripped = Vector{Point3f}(undef, length(gc))
-        for i in eachindex(gc)
-            gc_stripped[i] = ustrip(u"m", Point3(gc[i]))
-        end
-        gc_stripped
-    end
-
-    projection = projectxy.(x)
+    x = ustrip.(u"m", Point3.(gcE + ξ))
+    gc = ustrip.(u"m", gcE)
+    projection = ustrip.(u"m", projectionE)
 
     fig = Figure()
     ax = Axis3(fig[1,1])
+    # ax = Axis(fig[1,1])
 
-    # leg = Legend(fig[1,2], ax, ["Particle", "Projection", "Gyrocenter"])
 
-    b = bounds(vcat(x, gc, projection))
+    b = bounds(Vector{Point3f}(vcat(x, gc, projection)))
     xlims!(ax, b[1])
     ylims!(ax, b[2])
-    zlims!(ax, [-0.1, 0.1])
+    zlims!(ax, b[3])
 
     trajectories = (x,)
+    # trajectories = (dropz.(x),)
+    labels = ["Particle"]
     if do_proj
         trajectories = (trajectories..., projection)
+        # trajectories = (trajectories..., dropz.(projection))
+        push!(labels, "Projection")
     end
     if do_guiding_center
         trajectories = (trajectories..., gc)
+        # trajectories = (trajectories..., dropz.(gc))
+        push!(labels, "Gyrocenter")
     end
-
-    r = track_motion(fig, ax, trajectories)
+    r = track_motion(fig, ax, trajectories)#, labels)
+    # (r, fig)
 end
+
+# ╔═╡ 778c26f0-368e-4d96-ba19-fd719bbe6a64
+"""
+    dropz(p::Point3)
+
+Like `projectxy` but returns a `Point2` instead of zeroing out the last component.
+"""
+dropz(p::Point3) = Point2(p[1], p[2]);
+
+# ╔═╡ 5523ccad-c423-4a01-9727-76758cfd6a61
+"""
+    dropx(p::Point3)
+
+Like `projectxy` but returns a `Point2` instead of zeroing out the last component.
+"""
+dropx(p::Point3) = Point2(p[2], p[3]);
+
+# ╔═╡ f1042424-c496-4b93-b887-064a6542f755
+"""
+    dropy(p::Point3)
+
+Like `projectxy` but returns a `Point2` instead of zeroing out the last component.
+"""
+dropy(p::Point3) = Point2(p[1], p[3]);
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
@@ -753,7 +851,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "39b6c7afdb61094b053d3a75e9881adf2d052836"
+project_hash = "8b58eb902cde631e4948f3ab722234431c9e61aa"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -2472,7 +2570,6 @@ version = "1.13.0+0"
 # ╟─16a381a7-e3ac-42be-b94d-05a1fba351e5
 # ╟─88ada895-2d26-46b4-abfa-4e0dd7187339
 # ╠═6068010f-df5c-41a8-94d3-288eb71220d5
-# ╠═4e615923-0ac5-4061-ab91-95222d76a0cf
 # ╟─ee41070b-b68b-4f5f-98b6-c9843f9587eb
 # ╟─289316fd-59ee-4c9e-9bad-3dd2a93fcf21
 # ╟─8e214cc4-c04f-4739-a573-b539014c55aa
@@ -2508,15 +2605,18 @@ version = "1.13.0+0"
 # ╠═2ec96af8-4e67-4756-8236-71b10c6f146e
 # ╠═427c7557-f201-4279-8c67-d080f180b6d3
 # ╠═82ba8cd1-c7d3-4b29-8ec8-cfd5999d3b84
+# ╠═f1f7aade-2a49-4a92-be9c-889d74e39f1d
 # ╠═2d038925-3025-415d-9198-750101aeb703
 # ╟─8f9070d9-9412-4ccd-b84a-d8a20b6f7059
 # ╟─629f429f-8b33-4f25-af62-823c89da67a5
 # ╟─cb013904-1a68-4655-848b-4d520e66fc48
 # ╟─b345fb68-3b7f-4ec2-aa85-77f3f5b94fa1
 # ╟─a56195b7-3170-4c59-99d1-1ea8bae7bf69
-# ╠═75baec21-d3fa-487a-b8da-e41d88e35c8d
 # ╠═90a32382-7d24-400d-aa06-545b29a53177
+# ╠═75baec21-d3fa-487a-b8da-e41d88e35c8d
 # ╠═ad936609-ba30-48a0-9bf7-491b8d963d1c
+# ╠═5ef4bee3-36cf-438c-9bc6-3a6dac605954
+# ╠═763fc16e-cd10-4666-8b55-a7fda4f019be
 # ╟─11f230a0-2384-47e6-b88c-a95cad2d3c85
 # ╠═a1fc3ec1-9b51-4fee-80e8-40b1d309df59
 # ╠═40dd493c-21fb-4a29-a7b3-89a884345ce5
@@ -2525,6 +2625,12 @@ version = "1.13.0+0"
 # ╟─ea8f6887-368a-4d13-89f8-d0f60e29af1d
 # ╠═fb68ec9d-9112-47f2-afdd-5cd772e61e49
 # ╠═768ecc35-b7ac-4def-a1d6-6dcd90811769
+# ╠═6ef3b240-50fd-40ef-b88e-80016c9763c8
+# ╠═fe22e9cc-e129-4b32-b022-a7864739235d
+# ╠═9a453ed7-dae4-41c3-95a5-b1923db28d57
+# ╠═f6343498-ad2e-4dc8-a015-afe24ad4e129
+# ╠═35d14f11-4363-4392-a4e2-8bb9ff6db174
+# ╠═21b479b1-27bb-4cdb-9da6-84f4265db7ab
 # ╠═99274bb9-7598-455a-b450-c02782184e29
 # ╟─bd6f39b4-a999-44d2-a8b0-646c1e0a26a3
 # ╟─22f446e1-e229-41f2-bb32-85fa8b799e28
@@ -2533,11 +2639,15 @@ version = "1.13.0+0"
 # ╟─be32cbaa-a55f-4440-b8a5-c16c2d43cb7d
 # ╠═d9f14d74-164f-42ab-aac3-4d52a1b8917b
 # ╟─da308570-8d28-4d9f-8986-73706ab56983
+# ╠═44ca7c41-ecdc-4f32-99b4-834b89e60ad6
 # ╠═135f1d0d-8403-47c5-9aae-5efa2b995baf
 # ╠═6d736b0b-9e26-4800-8925-f287fc5d292b
 # ╠═2509dad4-0058-42f5-8a24-1dbec0b6772b
 # ╠═9c4ad1df-9076-4193-97d9-4e058776443c
 # ╠═681222bf-0091-4cd4-bfe1-b51a34545e48
 # ╠═27707139-f329-4908-9342-d3acc560b7d7
+# ╠═778c26f0-368e-4d96-ba19-fd719bbe6a64
+# ╠═5523ccad-c423-4a01-9727-76758cfd6a61
+# ╠═f1042424-c496-4b93-b887-064a6542f755
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
