@@ -4,6 +4,9 @@
 using Markdown
 using InteractiveUtils
 
+# ╔═╡ f3e73bf0-7a4b-473e-a5c0-7f99a43b95b8
+using RecursiveArrayTools: ArrayPartition
+
 # ╔═╡ ae5820a2-26c3-4bf7-9dd5-d136eaf35038
 using CairoMakie
 
@@ -128,7 +131,7 @@ function stellarboundaryinner!(residual, u_a, p)
 end
 
 # ╔═╡ 54cf2228-0041-476c-b56d-055b39afc596
-"""Boundary conditions at Mᵣ = M_⋆"""
+"""Boundary conditions at ``M_r = M_⋆``"""
 function stellarboundaryouter!(residual, u_b, p)
     r, T, P, Lᵣ = u_b
     # r, T, P, Lᵣ = r*m, T*K, P*Pa, Lᵣ*W
@@ -153,8 +156,8 @@ Use the shooting method to estimate the core temperature and pressure of this st
 solver = MultipleShooting(4, RK4())#, jac_alg = AutoFiniteDiff())
 
 # ╔═╡ 92fd50e9-dfdf-447c-ac60-fb46d0080dbc
-# u₀_guess = ArrayPartition([0.1m], [16e6K], [1.2e16Pa], [0.1W])
-u₀_guess = [1e-9, 16e6, 1.2e16, 1e-10]
+u₀_guess = ArrayPartition(0.1m, 16e6K, 1.2e16Pa, 0.1W)
+# u₀_guess = [1e-9, 16e6, 1.2e16, 1e-10]
 
 # ╔═╡ 55fa150f-3216-42ff-93a8-a61aee84b9c6
 T_c_guesses = logrange(3e5, 1e10, length = 3)
@@ -267,23 +270,22 @@ function odefun!(u′, u, p, Mᵣ)
     ρ = density(P, T)
     κ = massabsorpcoeff(ρ, T)
 
-    r′ = 1 / (4π*r^2*ρ) |> m/kg
-    T′ = -3/(64*π^2*a*c) * (κ*Lᵣ) / (T^3*r^4) |> K/kg
-    P′ = - G*Mᵣ / (4π*r^4) |> Pa/kg
-    Lᵣ′ = specificpower(ρ, T) |> W/kg
+    u′[1] = r′ = 1 / (4π*r^2*ρ) |> m/kg
+    u′[2] = T′ = -3/(64*π^2*a*c) * (κ*Lᵣ) / (T^3*r^4) |> K/kg
+    u′[3] = P′ = - G*Mᵣ / (4π*r^4) |> Pa/kg
+    u′[4] = Lᵣ′ = specificpower(ρ, T) |> W/kg
 
-    # u′ = ArrayPartition([r′], [T′], [P′], [Lᵣ′])
-    u′ .= [ustrip(m/kg, r′), ustrip(K/kg, T′), ustrip(Pa/kg, P′), ustrip(W/kg, Lᵣ′)]
+    # u′ .= ArrayPartition(r′, T′, P′, Lᵣ′)
+    # u′ .= [ustrip(m/kg, r′), ustrip(K/kg, T′), ustrip(Pa/kg, P′), ustrip(W/kg, Lᵣ′)]
 
-    #return u′
-    return nothing
+    return # u′
 end
 
 # ╔═╡ 6ac5b3da-c540-48ea-95b3-b51719ec36b1
 # bvpfunction = BVPFunction(odefun, stellarboundary)
 bvpfunction = TwoPointBVPFunction(
     odefun!, (stellarboundaryinner!, stellarboundaryouter!);
-    bcresid_prototype = (zeros(2), zeros(1)),
+    bcresid_prototype = (ArrayPartition(0.0m, 0.0W), [0.0Pa]),
     # syms = [:r, :T, :P, :Lᵣ],
 )
 
@@ -291,21 +293,30 @@ bvpfunction = TwoPointBVPFunction(
 const M_star = 100Msun
 
 # ╔═╡ e74e279d-8f51-4c3b-88a6-efffe6a9707e
-# Mᵣ_domain = (0kg, M_star |> kg)
-Mᵣ_domain = (0.0, ustrip(kg, M_star))
+Mᵣ_domain = (0.0kg, M_star |> kg)
+# Mᵣ_domain = (0.0, ustrip(kg, M_star))
 
 # ╔═╡ d8af8e17-d953-41ec-ad1e-ed7c246e23ea
 bvproblem = BVProblem(bvpfunction, u₀_guess, Mᵣ_domain)
-# bvproblem = TwoPointBVProblem(odefun, (bca, bcb), u₀_guess, Mᵣ_domain)
+# bvproblem = TwoPointBVProblem(odefun!, (stellarboundaryinner!, stellarboundaryouter!), u₀_guess, Mᵣ_domain)
+
+# ╔═╡ aea355d7-d5e8-44be-82fa-cf3b6f92a9d3
+bvproblem.u0
+
+# ╔═╡ fccdb8c0-0f63-49c0-bff9-d51c67b95a38
+zero(bvproblem.u0)
 
 # ╔═╡ bd4dcf7c-3189-4b0b-a8ff-0cc453dc78a3
-solve(bvproblem, solver; adaptive=false, dt = 1e9)
+solve(bvproblem, solver; adaptive=false, dt = 1e9kg)
+
+# ╔═╡ 55d47962-3653-432b-a270-96dc49478c77
+cld(Mᵣ_domain[2] - Mᵣ_domain[1], 1e23kg)
 
 # ╔═╡ 7e33115d-4ccc-4225-8887-4e42613b1685
 (Mᵣ_domain[2] - Mᵣ_domain[1]) / 10
 
 # ╔═╡ 6c25b9f7-e709-45c5-b4ed-86a1be0764b9
-tstops = logrange(∛nextfloat(Mᵣ_domain[1]), Mᵣ_domain[2], length=1000) |> collect
+tstops = logrange(∛nextfloat(ustrip(kg, Mᵣ_domain[1])), ustrip(kg, Mᵣ_domain[2]), length=1000)kg# |> collect
 
 # ╔═╡ 7118c7f2-07c3-4e79-98b1-6bdab1ccd2c5
 M_saves = range(Mᵣ_domain..., length=10)
@@ -319,11 +330,10 @@ begin
         bvp = BVProblem(bvpfunction, u₀_guess, Mᵣ_domain)
         # try solving it
         try
-            sol = solve(bvp, solver; tstops = range(Mᵣ_domain..., length=100), adaptive=false)
-            solutions[T_idx, P_idx] = sol
-            # if it errors, its not solvable
-        catch
+            sol = solve(bvp, solver; tstops = range(Mᵣ_domain..., length=100), adaptive = false)
             # if it's solved, save it to the solution matrix, the index corresponding to this T_c_guess and p_c_guess
+            solutions[T_idx, P_idx] = sol
+        catch # if it errors, its not solvable
             solutions[T_idx, P_idx] = nothing
         end
     end
@@ -3231,7 +3241,11 @@ version = "4.1.0+0"
 # ╠═6ac5b3da-c540-48ea-95b3-b51719ec36b1
 # ╠═d8af8e17-d953-41ec-ad1e-ed7c246e23ea
 # ╠═13b416d0-39ef-40bb-8997-8e1b7226e10a
+# ╠═f3e73bf0-7a4b-473e-a5c0-7f99a43b95b8
+# ╠═aea355d7-d5e8-44be-82fa-cf3b6f92a9d3
+# ╠═fccdb8c0-0f63-49c0-bff9-d51c67b95a38
 # ╠═bd4dcf7c-3189-4b0b-a8ff-0cc453dc78a3
+# ╠═55d47962-3653-432b-a270-96dc49478c77
 # ╠═7e33115d-4ccc-4225-8887-4e42613b1685
 # ╠═6c25b9f7-e709-45c5-b4ed-86a1be0764b9
 # ╠═7118c7f2-07c3-4e79-98b1-6bdab1ccd2c5
