@@ -362,10 +362,7 @@ tstops = logrange(∛nextfloat(ustrip(kg, Mᵣ_domain[1])), ustrip(kg, Mᵣ_doma
 M_saves = range(Mᵣ_domain..., length=10)
 
 # ╔═╡ 79c2f0f9-5cb4-4a19-ac97-14d174825c50
-# ╠═╡ disabled = true
-#=╠═╡
-solution = solve(bvproblem, solver, isoutofdomain = (u, p, Mᵣ) -> any(<(0), u), abstol = 0.1, tstops=M_saves, adaptive = false)
-  ╠═╡ =#
+solve(bvproblem, solver, isoutofdomain = (u, p, Mᵣ) -> any(<(0), u), abstol = 0.1, tstops = M_saves, adaptive = false)
 
 # ╔═╡ d4c3d589-617f-4ee8-a254-fab99978ba08
 begin
