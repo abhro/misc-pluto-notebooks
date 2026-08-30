@@ -341,13 +341,16 @@ bvproblem.u0
 zero(bvproblem.u0)
 
 # ╔═╡ bd4dcf7c-3189-4b0b-a8ff-0cc453dc78a3
-solve(bvproblem, solver; adaptive = false, dt = 1e30kg)
+solve(bvproblem, solver; adaptive = false, dt = 1e20kg)
 
 # ╔═╡ 1dc16800-a81e-415d-b1c2-14c106ef23b4
 bvproblem_oop = BVProblem(bvpfunction_oop, u₀_guess, Mᵣ_domain)
 
 # ╔═╡ e22a514f-aea5-4634-a036-6d6cc41776bc
-solve(bvproblem_oop, MIRK4(), dt = 0.1)
+solve(bvproblem_oop, MIRK4(), dt = 1e29kg)
+
+# ╔═╡ 7e96c4d4-c2a2-4887-9161-3f5ce9217e63
+cld(Mᵣ_domain[2] - Mᵣ_domain[1], 1e29kg)
 
 # ╔═╡ 55d47962-3653-432b-a270-96dc49478c77
 cld(Mᵣ_domain[2] - Mᵣ_domain[1], 1e23kg)
@@ -3366,6 +3369,7 @@ version = "4.1.0+0"
 # ╠═7f3668b9-9baa-4c32-9854-420d4e65a5f3
 # ╠═d8af8e17-d953-41ec-ad1e-ed7c246e23ea
 # ╠═1dc16800-a81e-415d-b1c2-14c106ef23b4
+# ╠═7e96c4d4-c2a2-4887-9161-3f5ce9217e63
 # ╠═e22a514f-aea5-4634-a036-6d6cc41776bc
 # ╠═13b416d0-39ef-40bb-8997-8e1b7226e10a
 # ╠═aea355d7-d5e8-44be-82fa-cf3b6f92a9d3
