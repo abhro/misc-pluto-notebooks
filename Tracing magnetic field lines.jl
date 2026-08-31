@@ -81,12 +81,12 @@ r0 = 1;
 θe = range(0, π, length = 1000);
 
 # ╔═╡ 619d040d-bb80-474d-8b9e-9b1e0cc4211b
-clines  = [:red, :blue, :grey, :purple, :brown, :purple, :pink, :orange, :magenta, :olive, :cyan];
+clines = [:red, :blue, :grey, :purple, :brown, :purple, :pink, :orange, :magenta, :olive, :cyan];
 
 # ╔═╡ 347ae72c-0d1a-4a65-b019-94957e5cdcf9
 let fig = Figure()
     ax = Axis(
-        fig[1,1];
+        fig[1, 1];
         xlabel = "Earth radii",
         ylabel = "Earth radii",
         xminorgridvisible = true,
@@ -95,7 +95,7 @@ let fig = Figure()
         yminorticksvisible = true,
     )
 
-    poly!(Circle(Point2f(0,0), r0), color = :lightgrey) # Plot the Earth
+    poly!(Circle(Point2f(0, 0), r0), color = :lightgrey) # Plot the Earth
 
     ic = -1
     for i in theta
@@ -108,11 +108,11 @@ let fig = Figure()
         inside_earth_idx = rad .< 1
         xb[inside_earth_idx] .= NaN
         yb[inside_earth_idx] .= NaN
-        color = clines[ic%10+1]
-        lines!(ax,  xb,  yb; color)
+        color = clines[ic % 10 + 1]
+        lines!(ax, xb, yb; color)
         # Assume a symmetrical distribution in the four quadrants
-        lines!(ax,  xb, -yb; color)
-        lines!(ax, -xb,  yb; color)
+        lines!(ax, xb, -yb; color)
+        lines!(ax, -xb, yb; color)
         lines!(ax, -xb, -yb; color)
     end
 

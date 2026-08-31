@@ -228,7 +228,7 @@ Initial velocity:
 """
 
 # ╔═╡ e3382bd2-d27f-4434-8417-4d91cbb7b9be
-v₀ = SVector(v_perp*cos(γ₀), v_perp*sin(γ₀), v_parallel)
+v₀ = SVector(v_perp * cos(γ₀), v_perp * sin(γ₀), v_parallel)
 
 # ╔═╡ 4687d979-afe8-4116-b4e7-614daa2d46be
 md"Plot projection: $projection_plot_checkbox"
@@ -312,16 +312,16 @@ where
 """
 
 # ╔═╡ 538efe14-e0c1-427a-8440-1870777c0618
-r1 = v_perp/ω_c * Point3(cos(γ₀), -sin(γ₀), 0);
+r1 = v_perp / ω_c * Point3(cos(γ₀), -sin(γ₀), 0);
 
 # ╔═╡ 2ec96af8-4e67-4756-8236-71b10c6f146e
 r2 = Ref(Point3(0u"m/s", 0u"m/s", v_parallel)) .* tspan;
 
 # ╔═╡ 427c7557-f201-4279-8c67-d080f180b6d3
-r3F = Ref(Point3(F.y, -F.x, 0u"N")/(q*B)) .* tspan;
+r3F = Ref(Point3(F.y, -F.x, 0u"N") / (q * B)) .* tspan;
 
 # ╔═╡ 82ba8cd1-c7d3-4b29-8ec8-cfd5999d3b84
-r4F = Ref(Point3(0u"m/s^2", 0u"m/s^2", F.z/2m)) .* tspan.^2;
+r4F = Ref(Point3(0u"m/s^2", 0u"m/s^2", F.z / 2m)) .* tspan .^ 2;
 
 # ╔═╡ f1f7aade-2a49-4a92-be9c-889d74e39f1d
 gcF = Ref(r1) .+ r2 .+ r3F .+ r4F;
@@ -410,10 +410,10 @@ where
 """
 
 # ╔═╡ a1fc3ec1-9b51-4fee-80e8-40b1d309df59
-r3E = Ref(SVector(E.y, -E.x, 0u"V/m")/B) .* tspan;
+r3E = Ref(SVector(E.y, -E.x, 0u"V/m") / B) .* tspan;
 
 # ╔═╡ 40dd493c-21fb-4a29-a7b3-89a884345ce5
-r4E = Ref(SVector(0u"m/s^2", 0u"m/s^2", q*E.z/2m)) .* tspan.^2;
+r4E = Ref(SVector(0u"m/s^2", 0u"m/s^2", q * E.z / 2m)) .* tspan .^ 2;
 
 # ╔═╡ 3d48e09d-95bf-45a8-a3e2-b6595f9e6441
 md"""
@@ -506,7 +506,7 @@ function guidingcenter(time, params)
     # TODO generalize for non-zero E, Fₑₓₜ
     v_perp = hypot(v₀.x, v₀.y)
     (; ω_c, γ₀) = params
-    return x₀ + v_perp/ω_c * SVector(cos(γ₀), -sin(γ₀), 0)
+    return x₀ + v_perp / ω_c * SVector(cos(γ₀), -sin(γ₀), 0)
 end
 
 # ╔═╡ 44ca7c41-ecdc-4f32-99b4-834b89e60ad6
@@ -520,7 +520,7 @@ Track motion of a single trajectory (one particle only).
 - `ax`: Makie `Axis`/`Axis3`
 - `trajectory`: list of points
 """
-function track_motion(fig, ax, trajectory::AbstractVector{T}) where T <: Union{Point, SVector}
+function track_motion(fig, ax, trajectory::AbstractVector{T}) where {T <: Union{Point, SVector}}
     live_traj = Observable([trajectory[begin]])
     lead_point = Observable(trajectory[begin])
     sizehint!(live_traj[], length(trajectory))
@@ -556,8 +556,8 @@ function track_motion(fig, ax, trajectories, t = eachindex(trajectories[begin]))
     live_traj = Observable[]
     lead_points = Observable[]
     for traj in trajectories
-        push!(live_traj, Observable(traj[begin:begin+1]))
-        push!(lead_points, Observable(traj[begin+1]))
+        push!(live_traj, Observable(traj[begin:(begin + 1)]))
+        push!(lead_points, Observable(traj[begin + 1]))
 
         # draw the start of this new trajectory
         lines!(ax, live_traj[end])
@@ -585,9 +585,10 @@ end
 function gyromotion(time, params)
     (; v_perp, v_parallel, ω_c, γ₀, x₀) = params
     return Point3(
-        -v_perp/ω_c * cos(ω_c * time + γ₀),
-        -v_perp/ω_c * sin(ω_c * time + γ₀),
-        zero(x₀.z))
+        -v_perp / ω_c * cos(ω_c * time + γ₀),
+        -v_perp / ω_c * sin(ω_c * time + γ₀),
+        zero(x₀.z)
+    )
 end
 
 # ╔═╡ fb68ec9d-9112-47f2-afdd-5cd772e61e49
@@ -609,13 +610,13 @@ xEF = Point3.(gcEF + ξ);
 function bounds(points, eps = 0.1)
     d = length(eltype(points))
     T = eltype(eltype(points))
-    bounds = Vector{Tuple{T,T}}(undef, d)
+    bounds = Vector{Tuple{T, T}}(undef, d)
     for i in 1:d
         min, max = extrema(x[i] for x in points)
-        min, max = min-T(eps), max+T(eps)   # add some padding
+        min, max = min - T(eps), max + T(eps)   # add some padding
         bounds[i] = (min, max)
     end
-    bounds
+    return bounds
 end
 
 # ╔═╡ 9c4ad1df-9076-4193-97d9-4e058776443c
@@ -627,7 +628,7 @@ Unitful.uconvert(u, p::Point) = uconvert.(u, p)
 
 Project a point in 3d to the xy-plane. (Zero out the last component).
 """
-projectxy(p::Point3{T}) where T = Point3(p[1], p[2], zero(T))
+projectxy(p::Point3{T}) where {T} = Point3(p[1], p[2], zero(T))
 
 # ╔═╡ 953d901e-63c8-4987-8655-a304521e34bb
 projectionbase = projectxy.(xbase);
@@ -639,7 +640,7 @@ let
     projection = ustrip.(u"m", projectionbase)
 
     fig = Figure()
-    ax = Axis3(fig[1,1])
+    ax = Axis3(fig[1, 1])
 
     # leg = Legend(fig[1,2], ax, ["Particle", "Projection", "Gyrocenter"])
 
@@ -667,7 +668,7 @@ let
     projection = ustrip.(u"m", projectionF)
 
     fig = Figure()
-    ax = Axis3(fig[1,1])
+    ax = Axis3(fig[1, 1])
 
     # leg = Legend(fig[1,2], ax, ["Particle", "Projection", "Gyrocenter"])
 
@@ -695,7 +696,7 @@ let
     projection = ustrip.(u"m", projectionE)
 
     fig = Figure()
-    ax = Axis3(fig[1,1])
+    ax = Axis3(fig[1, 1])
 
     b = bounds(vcat(x, gc, projection))
     limits!(ax, b...)
@@ -724,7 +725,7 @@ let
     projection = ustrip.(u"m", projectionEF)
 
     fig = Figure()
-    ax = Axis3(fig[1,1])
+    ax = Axis3(fig[1, 1])
 
     b = bounds(vcat(x, gc, projection))
     limits!(ax, b...)

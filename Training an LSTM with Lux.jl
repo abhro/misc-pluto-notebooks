@@ -50,18 +50,18 @@ function create_dataset(; dataset_size = 1000, sequence_length = 50)
     # create the spirals
     data = [MLUtils.Datasets.make_spiral(sequence_length) for _ in 1:dataset_size]
     # Get the labels
-    labels = vcat(fill(0.0f0, dataset_size÷2), fill(1.0f0, dataset_size÷2))
+    labels = vcat(fill(0.0f0, dataset_size ÷ 2), fill(1.0f0, dataset_size ÷ 2))
 
     clockwise_spirals = [
         reshape(d[1][:, 1:sequence_length], :, sequence_length, 1)
-        for d in data[1:(dataset_size÷2)]
+            for d in data[1:(dataset_size ÷ 2)]
     ]
     anticlockwise_spirals = [
-        reshape(d[1][:, (sequence_length+1):end], :, sequence_length, 1)
-        for d in data[(dataset_size÷2 + 1):end]
+        reshape(d[1][:, (sequence_length + 1):end], :, sequence_length, 1)
+            for d in data[(dataset_size ÷ 2 + 1):end]
     ]
 
-    x_data = Float32.(cat(clockwise_spirals..., anticlockwise_spirals...; dims=3))
+    x_data = Float32.(cat(clockwise_spirals..., anticlockwise_spirals...; dims = 3))
 
     return x_data, labels
 end
@@ -69,16 +69,18 @@ end
 # ╔═╡ 0acda80a-e3b1-4a49-936d-f861df0a6469
 function get_dataloaders(features, labels)
     # Split the dataset
-    (Xtrain, ytrain), (Xval, yval) = splitobs((features, labels); at = 0.8, shuffle=true)
+    (Xtrain, ytrain), (Xval, yval) = splitobs((features, labels); at = 0.8, shuffle = true)
 
     # Create DataLoaders
 
     # Use DataLoader to automatically minibatch and shuffle the data
     trainloader = DataLoader(
-        collect.((Xtrain, ytrain)); batchsize = 128, shuffle = true, partial = false)
+        collect.((Xtrain, ytrain)); batchsize = 128, shuffle = true, partial = false
+    )
     # Don't shuffle the validation data
     valloader = DataLoader(
-        collect.((Xval, yval)); batchsize = 128, shuffle = false,  partial = false)
+        collect.((Xval, yval)); batchsize = 128, shuffle = false, partial = false
+    )
 
     return (trainloader, valloader)
 end
@@ -105,7 +107,7 @@ begin
         )
     end
 
-    function (sc::SpiralClassifier)(x::AbstractArray{T,3}, ps::NamedTuple, st::NamedTuple) where T
+    function (sc::SpiralClassifier)(x::AbstractArray{T, 3}, ps::NamedTuple, st::NamedTuple) where {T}
 
         # First we will have to run the sequence through the LSTM Cell.
         # The first call to LSTM Cell will create the initial hidden state.
@@ -138,7 +140,7 @@ md"""
 function SpiralClassifierCompact(in_dims, hidden_dims, out_dims)
     lstm_cell = LSTMCell(in_dims => hidden_dims)
     classifier = Dense(hidden_dims => out_dims, sigmoid)
-    return @compact(; lstm_cell, classifier) do x::AbstractArray{T,3} where T
+    return @compact(; lstm_cell, classifier) do x::AbstractArray{T, 3} where {T}
         x_init, x_rest = Iterators.peel(LuxOps.eachslice(x, Val(2)))
         y, carry = lstm_cell(x_init)
         for x in x_rest
@@ -216,7 +218,7 @@ function validate_one_epoch(model, dataloader, train_state)
 end
 
 # ╔═╡ 7bf4a845-566b-4269-9a69-bd5df474301a
-function train(model, dataloaders; nepochs=25)
+function train(model, dataloaders; nepochs = 25)
     ps_init, st_init = Lux.setup(Xoshiro(1), model) |> gdev
 
     train_loader, val_loader = dataloaders |> gdev
@@ -228,14 +230,18 @@ function train(model, dataloaders; nepochs=25)
     for epoch in 1:nepochs
         # Train the model
         (train_state, total_loss, total_samples) = train_one_epoch!(
-            ad, lossfn, train_loader, train_state)
-        @printf("Epoch [%3d]: Loss %4.5f\n", epoch, total_loss/total_samples)
+            ad, lossfn, train_loader, train_state
+        )
+        @printf("Epoch [%3d]: Loss %4.5f\n", epoch, total_loss / total_samples)
 
         # Validate the model
         train_state, total_loss, total_samples, total_acc = validate_one_epoch(
-                model, val_loader, train_state)
-        @printf("Validation:\tLoss %4.5f\tAccuracy %4.5f\n",
-                total_loss/total_samples, total_acc/total_samples)
+            model, val_loader, train_state
+        )
+        @printf(
+            "Validation:\tLoss %4.5f\tAccuracy %4.5f\n",
+            total_loss / total_samples, total_acc / total_samples
+        )
     end
 
     return (train_state.parameters, train_state.states) |> cdev

@@ -8,7 +8,7 @@ using InteractiveUtils
 using Lux, LineSearches, ComponentArrays
 
 # ╔═╡ bbf4a648-db8a-488a-b9fa-268ef0666ffe
-using OrdinaryDiffEqLowOrderRK,SciMLSensitivity
+using OrdinaryDiffEqLowOrderRK, SciMLSensitivity
 
 # ╔═╡ 2bd3454f-ff05-41df-8940-513269ac97f5
 using Optimization, OptimizationOptimJL
@@ -67,18 +67,18 @@ end
     end
 
     if size(soln, 1) == 2
-        χ = soln[1,:]
-        φ = soln[2,:]
+        χ = soln[1, :]
+        φ = soln[2, :]
 
         if length(model_params) != 3
             throw(ArgumentError("length(model_params) must be 3 when size(soln, 1) == 2"))
         end
         p, M, e = model_params
     else
-        χ = soln[1,:]
-        φ = soln[2,:]
-        p = soln[3,:]
-        e = soln[4,:]
+        χ = soln[1, :]
+        φ = soln[2, :]
+        p = soln[3, :]
+        e = soln[4, :]
     end
 
     r = @. p / (1 + e * cos(χ))
@@ -96,10 +96,10 @@ end
 Approximate derivative with respect to t.
 """
 function Dₜ(v::AbstractVector, Δt)
-    weights = SVector(3/2, -2, 1/2)
-    a = -weights' * v[begin:begin+2]
-    b = (v[begin+2:end] - v[begin:end-2]) / 2
-    c = weights' * v[end:-1:end-2]
+    weights = SVector(3 / 2, -2, 1 / 2)
+    a = -weights' * v[begin:(begin + 2)]
+    b = (v[(begin + 2):end] - v[begin:(end - 2)]) / 2
+    c = weights' * v[end:-1:(end - 2)]
     return [a; b; c] / Δt
 end
 
@@ -111,9 +111,9 @@ Approximate second derivative with respect to t.
 """
 function Dₜ²(v::AbstractVector, Δt)
     weights = SVector(2, -5, 4, -1)
-    a = weights' * v[begin:begin+3]
-    b = v[begin:end-2] - 2 * v[begin+1:end-1] + v[begin+2:end]
-    c = weights' * v[end:-1:end-3]
+    a = weights' * v[begin:(begin + 3)]
+    b = v[begin:(end - 2)] - 2 * v[(begin + 1):(end - 1)] + v[(begin + 2):end]
+    c = weights' * v[end:-1:(end - 3)]
     return [a; b; c] / Δt^2
 end
 
@@ -128,9 +128,9 @@ function orbit2tensor(orbit, component, mass = 1)
     trace = lxx .+ lyy
 
     if component[1] == 1 && component[2] == 1
-        tmp = lxx - trace/3
+        tmp = lxx - trace / 3
     elseif component[1] == 2 && component[2] == 2
-        tmp = lyy - trace/3
+        tmp = lyy - trace / 3
     else
         tmp = lxy
     end
@@ -146,67 +146,67 @@ end
 
 # ╔═╡ 5e54004d-c021-4ffc-863e-1ad0f9c057a0
 begin
-"""
-    h_22_quadrupole(Δt, orbit, mass = 1)
+    """
+        h_22_quadrupole(Δt, orbit, mass = 1)
 
-One-body quadrupole
-"""
-function h_22_quadrupole(Δt, orbit, mass = 1)
-    h11 = h_22_quadrupole_components(Δt, orbit, (1, 1), mass)
-    h22 = h_22_quadrupole_components(Δt, orbit, (2, 2), mass)
-    h12 = h_22_quadrupole_components(Δt, orbit, (1, 2), mass)
+    One-body quadrupole
+    """
+    function h_22_quadrupole(Δt, orbit, mass = 1)
+        h11 = h_22_quadrupole_components(Δt, orbit, (1, 1), mass)
+        h22 = h_22_quadrupole_components(Δt, orbit, (2, 2), mass)
+        h12 = h_22_quadrupole_components(Δt, orbit, (1, 2), mass)
 
-    return h11, h12, h22
-end
+        return h11, h12, h22
+    end
 
-"""
-    h_22_quadrupole(Δt, orbit1, mass1, orbit2, mass2)
+    """
+        h_22_quadrupole(Δt, orbit1, mass1, orbit2, mass2)
 
-Two-body quadrupole
-"""
-function h_22_quadrupole(Δt, orbit1, mass1, orbit2, mass2)
-    return (
-        h_22_quadrupole(Δt, orbit1, mass1)
-        .+
-        h_22_quadrupole(Δt, orbit2, mass2)
-    )
-end
+    Two-body quadrupole
+    """
+    function h_22_quadrupole(Δt, orbit1, mass1, orbit2, mass2)
+        return (
+            h_22_quadrupole(Δt, orbit1, mass1)
+                .+
+                h_22_quadrupole(Δt, orbit2, mass2)
+        )
+    end
 end;
 
 # ╔═╡ a63a0e20-d150-428c-9241-8c5d9c5f6b87
 begin
-"""
-    h_22_strain(Δt, orbit)
-One-body strain
-"""
-function h_22_strain(Δt::T, orbit) where {T}
-    h11, h12, h22 = h_22_quadrupole(Δt, orbit)
+    """
+        h_22_strain(Δt, orbit)
+    One-body strain
+    """
+    function h_22_strain(Δt::T, orbit) where {T}
+        h11, h12, h22 = h_22_quadrupole(Δt, orbit)
 
-    h₊ = h11 - h22
-    hₓ = T(2) * h12
+        h₊ = h11 - h22
+        hₓ = T(2) * h12
 
-    scale = √(T(π) / 5)
-    return scale * h₊, -scale * hₓ
-end
-
-"""
-    h_22_strain(Δt, orbit1, mass1, orbit2, mass2)
-
-Two-body strain
-"""
-function h_22_strain(Δt::T, orbit1, mass1, orbit2, mass2) where {T}
-    if abs(mass1 + mass2 - 1.0) > 1e-12
-        throw(ArgumentError("masses do not sum to unity"))
+        scale = √(T(π) / 5)
+        return scale * h₊, -scale * hₓ
     end
 
-    h11, h12, h22 = h_22_quadrupole(Δt, orbit1, mass1, orbit2, mass2)
+    """
+        h_22_strain(Δt, orbit1, mass1, orbit2, mass2)
 
-    h₊ = h11 - h22
-    hₓ = T(2) * h12
+    Two-body strain
+    """
+    function h_22_strain(Δt::T, orbit1, mass1, orbit2, mass2) where {T}
+        if abs(mass1 + mass2 - 1.0) > 1.0e-12
+            throw(ArgumentError("masses do not sum to unity"))
+        end
 
-    scale = √(T(π) / 5)
-    return scale * h₊, -scale * hₓ
-end
+        h11, h12, h22 = h_22_quadrupole(Δt, orbit1, mass1, orbit2, mass2)
+
+        h₊ = h11 - h22
+        hₓ = T(2) * h12
+
+        scale = √(T(π) / 5)
+        return scale * h₊, -scale * hₓ
+    end
 end;
 
 # ╔═╡ be1d332a-8e6e-4ff9-8b4c-b93e7b8c9da8
@@ -240,12 +240,12 @@ function RelativisticOrbitModel(u, (; p, M, e), t)
 
     scale = (
         (p - 2 - 2e * cos(χ)) * (1 + e * cos(χ))^2
-        /
-        √((p - 2)^2 - 4 * e^2)
+            /
+            √((p - 2)^2 - 4 * e^2)
     )
 
     χ̇ = scale * √(p - 6 - 2e * cos(χ)) / (M * p^2)
-    φ̇ = scale / (M * p^(3//2))
+    φ̇ = scale / (M * p^(3 // 2))
 
     return [χ̇, φ̇]
 end
@@ -291,7 +291,7 @@ waveform = compute_waveform(Δt_data, Array(soln), mass_ratio, ode_model_params)
 # ╔═╡ 213a5866-3d3e-4c16-9b05-d6e6605d9723
 let
     fig = Figure()
-    ax = Axis(fig[1,1],  xlabel = "Time", ylabel = "Waveform")
+    ax = Axis(fig[1, 1], xlabel = "Time", ylabel = "Waveform")
 
     l = lines!(ax, tsteps, waveform, linewidth = 2, alpha = 0.75)
     s = scatter!(ax, tsteps, waveform, marker = :circle, markersize = 10, alpha = 0.25)
@@ -307,7 +307,7 @@ md"""
 """
 
 # ╔═╡ c822feb6-9fa1-498d-bb7e-6eea21a82ec6
-initparams = (init_weight = truncated_normal(std = 1e-4), init_bias = zeros32)
+initparams = (init_weight = truncated_normal(std = 1.0e-4), init_bias = zeros32)
 
 # ╔═╡ 7bd4c04b-8108-417f-814d-ac9d17e41fb5
 const nn = Chain(
@@ -336,7 +336,7 @@ function ODE_model(u, nn_params, t)
     y = 1 .+ nn_model([first(u)], nn_params)
 
     p, M, e = ode_model_params
-    scale = (1 + e * cos(χ)^2) / (M * p^(3//2))
+    scale = (1 + e * cos(χ)^2) / (M * p^(3 // 2))
 
     χ̇ = scale * y[1]
     φ̇ = scale * y[2]
@@ -350,7 +350,8 @@ prob_nn = ODEProblem(ODE_model, u₀, tspan, ps)
 # ╔═╡ 623eb0be-c3e7-400e-b98a-184cf122202a
 soln_nn = solve(
     prob_nn, RK4(), u0 = u₀, p = ps,
-    saveat = tsteps, dt = Δt, adaptive = false)
+    saveat = tsteps, dt = Δt, adaptive = false
+)
 
 # ╔═╡ be6a07c1-d220-4908-9741-37b90e5df708
 waveform_nn = compute_waveform(
@@ -388,7 +389,8 @@ const mseloss = MSELoss();
 function loss(θ)
     pred = solve(
         prob_nn, RK4(), u0 = u₀, p = θ,
-        saveat = tsteps, dt = Δt, adaptive = false)
+        saveat = tsteps, dt = Δt, adaptive = false
+    )
     pred_waveform = compute_waveform(
         Δt_data, Array(pred), mass_ratio, ode_model_params
     ) |> first
@@ -442,7 +444,7 @@ md"""
 # ╔═╡ b1d576dc-fb97-4fe2-b4df-9d15deb1e23f
 let
     fig = Figure()
-    ax = Axis(fig[1,1], xlabel = "Iteration", ylabel = "Loss")
+    ax = Axis(fig[1, 1], xlabel = "Iteration", ylabel = "Loss")
 
     lines!(ax, losses, linewidth = 4, alpha = 0.75)
     scatter!(ax, losses, marker = :circle, markersize = 12, strokewidth = 2)

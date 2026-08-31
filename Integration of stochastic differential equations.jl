@@ -107,7 +107,7 @@ d\mathbf{u} &= \begin{bmatrix}
 function f!(du, u, p, t)
     (r, θ, φ, μ, p) = u
     b = magfield(r, θ, φ)
-    du[1:3] .= grad(κ_⊥) + norm(v) * μ * b/norm(b) + 0 + V_d
+    du[1:3] .= grad(κ_⊥) + norm(v) * μ * b / norm(b) + 0 + V_d
     du[4] = ∂D_μμ∂t + dμdt
     du[5] = dpdt
     return du

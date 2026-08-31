@@ -72,7 +72,8 @@ create_mlp(activation, hidden_dims) = Chain(
     Dense(3 => hidden_dims, activation),
     Dense(hidden_dims => hidden_dims, activation),
     Dense(hidden_dims => hidden_dims, activation),
-    Dense(hidden_dims => 1))
+    Dense(hidden_dims => 1)
+)
 
 # ╔═╡ 8c3e3a18-e99f-4cc5-a50f-102c86be019d
 begin
@@ -84,7 +85,8 @@ begin
     PINN(; hidden_dims::Int = 32) = PINN(
         create_mlp(tanh, hidden_dims),
         create_mlp(tanh, hidden_dims),
-        create_mlp(tanh, hidden_dims))
+        create_mlp(tanh, hidden_dims)
+    )
 end
 
 # ╔═╡ e9c6ec31-22c0-4de6-a4be-ecbf6fc4d2bf
@@ -99,8 +101,9 @@ md"""
 Physics informed loss function. `u`, `v`, `w` must be a `StatefulLuxLayer`.
 """
 @views function PILoss(
-    u::StatefulLuxLayer, v::StatefulLuxLayer, w::StatefulLuxLayer,
-    xyt::AbstractArray)
+        u::StatefulLuxLayer, v::StatefulLuxLayer, w::StatefulLuxLayer,
+        xyt::AbstractArray
+    )
 
     ∇u = Zygote.gradient(sum ∘ u, xyt) |> only
     ∂u_∂x, ∂u_∂y, ∂u_∂t = ∇u[1:1, :], ∇u[2:2, :], ∇u[3:3, :]
@@ -113,8 +116,8 @@ Physics informed loss function. `u`, `v`, `w` must be a `StatefulLuxLayer`.
 
     return (
         mean(abs2, ∂u_∂t - ∂v_∂x - ∂w_∂y) +
-        mean(abs2, v_xyt - ∂u_∂x) +
-        mean(abs2, w_xyt - ∂u_∂y)
+            mean(abs2, v_xyt - ∂u_∂x) +
+            mean(abs2, w_xyt - ∂u_∂y)
     )
 end
 
@@ -223,8 +226,9 @@ md"""
 
 # ╔═╡ ddd1cbc7-7f1e-4a93-9f4f-07f5a4288a95
 function train_model(
-    xyt, target_data, xyt_bc, target_bc;
-    seed::Int = 0, maxiters::Int = 50_000, hidden_dims::Int = 32)
+        xyt, target_data, xyt_bc, target_bc;
+        seed::Int = 0, maxiters::Int = 50_000, hidden_dims::Int = 32
+    )
 
     rng = Random.default_rng()
     Random.seed!(rng, seed)
@@ -235,16 +239,18 @@ function train_model(
     bc_dataloader = DataLoader((xyt_bc, target_bc), batchsize = 32, shuffle = true) |> gdev
     pde_dataloader = DataLoader((xyt, target_data), batchsize = 32, shuffle = true) |> gdev
 
-    train_state = Training.TrainState(pinn, ps, st, Adam(5f-2))
+    train_state = Training.TrainState(pinn, ps, st, Adam(5.0f-2))
     # adaptive learning rate
-    lr = i -> i < 5000 ? 5f-2 : (i < 10_000 ? 5f-3 : 5f-4)
+    lr = i -> i < 5000 ? 5.0f-2 : (i < 10_000 ? 5.0f-3 : 5.0f-4)
 
     total_loss_tracker, physics_loss_tracker, data_loss_tracker, bc_loss_tracker = ntuple(
-        _ -> Lag(Float32, 32), 4)
+        _ -> Lag(Float32, 32), 4
+    )
 
     iter = 1
     dataiterator = zip(
-        Iterators.cycle(pde_dataloader), Iterators.cycle(bc_dataloader))
+        Iterators.cycle(pde_dataloader), Iterators.cycle(bc_dataloader)
+    )
 
     for ((xyt_batch, u_batch), (xyt_bc_batch, u_bc_batch)) in dataiterator
 
@@ -253,7 +259,8 @@ function train_model(
         _, loss, stats, train_state = Training.single_train_step!(
             AutoZygote(), loss_function,
             (xyt_batch, u_batch, xyt_bc_batch, u_bc_batch),
-            train_state)
+            train_state
+        )
 
         fit!(total_loss_tracker, loss)
         fit!(physics_loss_tracker, stats.physics_loss)
@@ -268,13 +275,15 @@ function train_model(
         isnan(loss) && throw(ArgumentError("NaN Loss Detected"))
 
         if iter == 1 || iter % 1000 == 0 || iter == maxiters
-            @info(@sprintf(
-                "Iteration: [%5d / %5d] \t Loss: %.9f (%.9f) \t Physics Loss: %.9f (%.9f) \t Data Loss: %.9F (%.9f) \t BC Loss: %.9f (%.9f))",
-                iter, maxiters, loss, mean_loss,
-                stats.physics_loss, mean_physics_loss,
-                stats.data_loss, mean_data_loss,
-                stats.bc_loss, mean_bc_loss
-            ))
+            @info(
+                @sprintf(
+                    "Iteration: [%5d / %5d] \t Loss: %.9f (%.9f) \t Physics Loss: %.9f (%.9f) \t Data Loss: %.9F (%.9f) \t BC Loss: %.9f (%.9f))",
+                    iter, maxiters, loss, mean_loss,
+                    stats.physics_loss, mean_physics_loss,
+                    stats.data_loss, mean_data_loss,
+                    stats.bc_loss, mean_bc_loss
+                )
+            )
         end
 
         iter ≥ maxiters && break
@@ -282,15 +291,19 @@ function train_model(
     end
 
     return StatefulLuxLayer{true}(
-        pinn, cdev(train_state.parameters), cdev(train_state.states))
+        pinn, cdev(train_state.parameters), cdev(train_state.states)
+    )
 end
 
 # ╔═╡ 4fe21a00-c083-4fd6-a695-c52240c3a060
 trained_model = train_model(xyt_scaled, target_data_scaled, xyt_bc_scaled, target_bc_scaled)
 
 # ╔═╡ b67d7b58-c79a-45bc-a92e-81be68febf2d
-trained_u = Lux.testmode(StatefulLuxLayer{true}(
-    trained_model.model.u, trained_model.ps.u, trained_model.st.u))
+trained_u = Lux.testmode(
+    StatefulLuxLayer{true}(
+        trained_model.model.u, trained_model.ps.u, trained_model.st.u
+    )
+)
 
 # ╔═╡ 34efddda-66e0-4541-899c-beb7504a8362
 md"""
@@ -320,8 +333,8 @@ u_pred = (
 # ╔═╡ dc8bbc94-9454-4336-a0ee-12085884c5f0
 let fig = Figure()
     ax = Axis(fig[1, 1], xlabel = "x", ylabel = "y")
-    errs = [abs.(u_pred[:,:,i] - u_real[:,:,i]) for i in eachindex(ts)]
-    Colorbar(fig[1,2], limits = extrema(stack(errs)))
+    errs = [abs.(u_pred[:, :, i] - u_real[:, :, i]) for i in eachindex(ts)]
+    Colorbar(fig[1, 2], limits = extrema(stack(errs)))
 
     CairoMakie.record(fig, "pinn_nested_ad.gif", eachindex(ts), framerate = 5) do i
         ax.title = @sprintf("Abs. Predictor Error | Time: %.2f", ts[i])
